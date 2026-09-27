@@ -7,7 +7,7 @@ import { useHeld } from '../input/pressed';
 import { FAMILY_NAME, SOUNDS, soundById } from '../state/instruments';
 import { NOTE_NAMES, SCALES, type Family, type Pict as PictId, type SoundboardItem, type Track } from '../state/model';
 import { addTrack, assignSoundboard, useStudio } from '../state/store';
-import { toast, useUi, type KbMode } from '../state/ui';
+import { KB_MODE_NAME, toast, useUi, type KbMode } from '../state/ui';
 import { INK, Pict } from './Pict';
 import { Icon } from './Icon';
 import { Seg } from './controls';
@@ -25,7 +25,7 @@ export function Pads() {
   return (
     <div className="pads">
       <div className="cab-pads">
-        <h3>{kbMode === 'pads' ? 'Pads' : kbMode === 'piano' ? 'Piano' : kbMode === 'escala' ? 'Escala' : 'Soundboard'}</h3>
+        <h3>{KB_MODE_NAME[kbMode]}</h3>
         {kbMode !== 'soundboard' && (
           <span className="nota-pads" title={keyboardOn ? 'El teclado de tu computadora toca estos sonidos' : 'Prende el teclado musical con Tab'}>
             {kbMode === 'pads' ? (

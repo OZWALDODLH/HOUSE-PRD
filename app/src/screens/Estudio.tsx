@@ -1,5 +1,5 @@
 // Estudio: top bar, sounds, tabs, marquee, steps, instrument and pads (or the mixer).
-import { useUi } from '../state/ui';
+import { KB_MODE_NAME, useUi } from '../state/ui';
 import { Barra } from '../ui/Barra';
 import { Sonidos } from '../ui/Sonidos';
 import { Marquesina } from '../ui/Marquesina';
@@ -14,7 +14,7 @@ import { openDialog } from '../state/ui';
 
 export function Estudio() {
   const { tab, set, keyboardOn, kbMode } = useUi();
-  const modo = kbMode === 'pads' ? 'Pads' : kbMode === 'piano' ? 'Piano' : 'Escala';
+  const modo = KB_MODE_NAME[kbMode];
   return (
     <div className="app">
       {keyboardOn && <div className="franja-tm" aria-hidden="true" />}

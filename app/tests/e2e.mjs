@@ -92,6 +92,7 @@ try {
 
   await check('El Soundboard suena aunque la canción esté parada', async () => {
     await page.getByRole('radio', { name: 'Soundboard' }).click();
+    await page.getByText('Teclado musical en Soundboard').waitFor({ timeout: 2000 });
     await page.keyboard.press('KeyA');
     await page.waitForTimeout(150);
     const s = await status();
