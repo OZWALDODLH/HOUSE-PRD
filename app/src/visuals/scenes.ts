@@ -71,11 +71,11 @@ vec3 scene(vec2 p) {
   a = mod(a, seg);
   a = abs(a - seg * 0.5);
   vec2 q = vec2(cos(a), sin(a)) * r;
-  q *= 1.6 - 0.22 * uKick - 0.1 * uDrop;
+  q *= 1.6 - 0.1 * uKick - 0.08 * uDrop;
   q += vec2(t * 0.11, -t * 0.07);
   float v = sin(q.x * 7.0 + sin(q.y * 5.0 + t * 0.6) * 1.5) + sin(q.y * 8.0 - t * 0.9 + uLow * 2.0) + sin((q.x + q.y) * 6.0 + t * 0.4);
   v /= 3.0;
-  float rings = 0.5 + 0.5 * sin(r * 18.0 - t * 1.5 - uKick * 1.5);
+  float rings = 0.5 + 0.5 * sin(r * 18.0 - t * 1.5 - uKick * 0.6);
   vec3 col = pal(v * 0.35 + r * 0.4 + t * 0.03);
   col *= 0.55 + 0.45 * rings;
   col *= smoothstep(1.25, 0.15, r);
@@ -86,7 +86,7 @@ vec3 scene(vec2 p) {
   float t = uTime;
   float r = max(length(p), 0.001);
   float a = atan(p.y, p.x);
-  float z = 0.4 / r + t * (0.6 + uBuild * 1.6) + uKick * 0.12;
+  float z = 0.4 / r + t * (0.6 + uBuild * 1.6) + uKick * 0.04;
   float ang = a / 6.2831853 * 8.0 + t * 0.1 + z * 0.08;
   float d = abs(fract(z * 1.5) - 0.5);
   float w = 0.06 + fwidth(z * 1.5);
@@ -94,13 +94,13 @@ vec3 scene(vec2 p) {
   float spokes = 0.6 + 0.4 * smoothstep(0.2, 0.5, abs(fract(ang) - 0.5));
   vec3 col = pal(z * 0.06 + a * 0.02) * (0.25 + 0.75 * rings) * spokes;
   col *= smoothstep(0.02, 0.4, r);
-  col += pal(z * 0.06 + 0.5) * 0.12 * uHigh * smoothstep(0.1, 0.6, r);
+  col += pal(z * 0.06 + 0.5) * 0.06 * uHigh * smoothstep(0.1, 0.6, r);
   return col;
 }`,
   plasma: `
 vec3 scene(vec2 p) {
   float t = uTime * 0.6;
-  vec2 q = p * (1.8 - 0.2 * uKick);
+  vec2 q = p * 1.8 + 0.06 * uKick * vec2(sin(t), cos(t));
   for (int i = 0; i < 4; i++) {
     float fi = float(i);
     q += 0.32 * vec2(sin(q.y * 1.6 + t + fi * 1.3), cos(q.x * 1.4 - t * 0.8 + fi * 2.1));
@@ -108,7 +108,7 @@ vec3 scene(vec2 p) {
   float v = sin(q.x + q.y * 0.7 + uLow * 1.5) * 0.5 + 0.5;
   float w = sin(length(q) * 2.5 - t) * 0.5 + 0.5;
   vec3 col = pal(v * 0.6 + w * 0.3 + t * 0.02);
-  return col * (0.55 + 0.3 * w + 0.15 * uEnergy);
+  return col * (0.6 + 0.3 * w);
 }`,
   aurora: `
 vec3 scene(vec2 p) {

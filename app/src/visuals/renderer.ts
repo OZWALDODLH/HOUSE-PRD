@@ -1,11 +1,18 @@
 // WebGL2 renderer for the visuals: scenes, crossfades and the safe mode.
 //
-// Safe mode (always on): the picture is measured on a 4×4 grid every frame
-// (GPU downsample, then a 16-pixel read). Each region's luminance may change
-// at most 0.6 per second (relative luminance, 0..1). A WCAG flash is a rise
-// and a fall of 0.1 or more, so each one takes at least 1/3 s: never more
-// than 3 flashes per second. Saturated red is also toned down.
-import { SCENES, sceneSource } from './scenes';
+// Safe mode (always on). A WCAG flash is a pair of opposite changes of 0.1 or
+// more in relative luminance. Every frame, the luminance (linear, 0..1) of
+// each region of a 4×4 grid is measured exactly on the GPU (a power-of-two
+// luminance image and its mip chain), and per region:
+// - Content that keeps pulsing (3+ swings in 2 s) is smoothed: it may change
+//   at most 0.6 per second, so a flash would take at least 1/3 s.
+// - Hard cap: after 4 swings (2 flashes) in the last second, no new swing is
+//   allowed until the oldest one is a second old. That leaves a margin under
+//   the limit of 3 flashes per second.
+// The gains are applied in linear light, and the finished picture is measured
+// again before it is shown; a region outside its limits is corrected and
+// redrawn. Calm content is never touched. Saturated red is toned down.
+import { PRELUDE, SCENES, sceneSource } from './scenes';
 import type { SceneId } from './link';
 
 export interface FrameInput {
@@ -45,21 +52,23 @@ void main() {
 }
 `;
 
-// Averages each quarter of the picture (reading a coarse mip level).
-const PROBE = `#version 300 es
+const SRGB = `
+vec3 toLinear(vec3 c) { return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c)); }
+vec3 toSrgb(vec3 c) { return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c)); }
+`;
+
+// Relative luminance of a picture, into a 256×256 image (its mip level 6 is
+// the 4×4 grid of exact averages).
+const MEASURE = `#version 300 es
 precision highp float;
 uniform sampler2D uSrc;
 uniform float uLod;
 out vec4 o;
+${SRGB}
 void main() {
-  vec2 cell = floor(gl_FragCoord.xy);
-  vec4 acc = vec4(0.0);
-  for (int j = 0; j < 4; j++)
-    for (int i = 0; i < 4; i++) {
-      vec2 uv = (cell + (vec2(float(i), float(j)) + 0.5) / 4.0) / 4.0;
-      acc += textureLod(uSrc, uv, uLod);
-    }
-  o = acc / 16.0;
+  vec3 c = textureLod(uSrc, gl_FragCoord.xy / 256.0, uLod).rgb;
+  float l = dot(toLinear(c), vec3(0.2126, 0.7152, 0.0722));
+  o = vec4(l, l, l, 1.0);
 }
 `;
 
@@ -69,17 +78,25 @@ uniform sampler2D uSrc;
 uniform sampler2D uGain;
 uniform vec2 uSize;
 out vec4 o;
+${SRGB}
 void main() {
   vec2 uv = gl_FragCoord.xy / uSize;
-  vec3 c = texture(uSrc, uv).rgb;
-  // Gain map: 4×4 regions, smooth between their centers.
-  float g = texture(uGain, uv).r;
-  c *= g;
+  vec3 c = toLinear(texture(uSrc, uv).rgb);
   // Safe mode: saturated red is the most dangerous colour; soften it.
   float red = max(0.0, c.r - max(c.g, c.b));
-  c.r -= red * 0.35;
-  o = vec4(clamp(c, 0.0, 1.0), 1.0);
+  c.r -= red * 0.5;
+  // One gain per region of the 4×4 grid (exactly the measured area), in linear light.
+  c *= texture(uGain, uv).r;
+  o = vec4(toSrgb(clamp(c, 0.0, 1.0)), 1.0);
 }
+`;
+
+const COPY = `#version 300 es
+precision highp float;
+uniform sampler2D uSrc;
+uniform vec2 uSize;
+out vec4 o;
+void main() { o = texture(uSrc, gl_FragCoord.xy / uSize); }
 `;
 
 interface Target {
@@ -96,23 +113,73 @@ interface Prog {
   u: Uniforms;
 }
 
-const MAX_RATE = 0.6; // relative luminance per second
+const MAX_RATE = 0.6; // relative luminance per second, when smoothing
+const SWING = 0.09; // a bit under WCAG's 0.1, to keep a margin
 const GRID = 4;
+
+/** Swing detector: counts reversals of at least `SWING` in luminance. */
+interface Swings {
+  dir: number;
+  ref: number;
+  times: number[];
+}
+
+function feed(sw: Swings, v: number, now: number, keep: number): void {
+  if (sw.dir === 0) {
+    sw.dir = 1;
+    sw.ref = v;
+  } else if (sw.dir > 0) {
+    if (v > sw.ref) sw.ref = v;
+    else if (sw.ref - v >= SWING) {
+      sw.times.push(now);
+      sw.dir = -1;
+      sw.ref = v;
+    }
+  } else if (v < sw.ref) sw.ref = v;
+  else if (v - sw.ref >= SWING) {
+    sw.times.push(now);
+    sw.dir = 1;
+    sw.ref = v;
+  }
+  while (sw.times.length && now - sw.times[0] > keep) sw.times.shift();
+}
+
+interface Region {
+  /** What the scene wants to show (to detect pulsing content). */
+  want: Swings;
+  /** What was shown (for the hard cap). */
+  shown: Swings;
+  out: number;
+  smooth: boolean;
+  lo: number;
+  hi: number;
+}
 
 export class VisualsRenderer {
   private gl: WebGL2RenderingContext;
   private vao: WebGLVertexArrayObject;
   private scenes = new Map<SceneId, Prog>();
   private mixP: Prog;
-  private probeP: Prog;
+  private measureP: Prog;
   private finalP: Prog;
+  private copyP: Prog;
   private a: Target | null = null;
   private b: Target | null = null;
   private m: Target | null = null;
-  private probe: Target;
+  private f: Target | null = null;
+  private lum: { tex: WebGLTexture; draw: WebGLFramebuffer; read: WebGLFramebuffer };
   private gainTex: WebGLTexture;
   private px = new Uint8Array(GRID * GRID * 4);
-  private lumaOut = new Float32Array(GRID * GRID).fill(-1);
+  private measured = new Float32Array(GRID * GRID);
+  private regions: Region[] = Array.from({ length: GRID * GRID }, () => ({
+    want: { dir: 0, ref: 0, times: [] },
+    shown: { dir: 0, ref: 0, times: [] },
+    out: -1,
+    smooth: false,
+    lo: 0,
+    hi: 1,
+  }));
+  private light = 1;
   private gains = new Float32Array(GRID * GRID).fill(1);
   private time = 0;
   private current: SceneId;
@@ -123,8 +190,6 @@ export class VisualsRenderer {
   scale = 1;
   private slow = 0;
   private fast = 0;
-  /** Opposite luminance swings of 0.1+ seen per region (for the safety test). */
-  private swings: { dir: number; ref: number; times: number[] }[] = Array.from({ length: GRID * GRID }, () => ({ dir: 0, ref: 0, times: [] }));
   private clock = 0;
   lost = false;
 
@@ -142,14 +207,28 @@ export class VisualsRenderer {
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     this.vao = vao;
     this.mixP = this.program(MIX, ['uA', 'uB', 'uFade', 'uSize']);
-    this.probeP = this.program(PROBE, ['uSrc', 'uLod']);
+    this.measureP = this.program(MEASURE, ['uSrc', 'uLod']);
     this.finalP = this.program(FINAL, ['uSrc', 'uGain', 'uSize']);
-    this.probe = this.target(GRID, GRID, false);
+    this.copyP = this.program(COPY, ['uSrc', 'uSize']);
+    // 256×256 luminance image with all 9 mip levels; level 6 is 4×4.
+    const lumTex = gl.createTexture()!;
+    gl.bindTexture(gl.TEXTURE_2D, lumTex);
+    gl.texStorage2D(gl.TEXTURE_2D, 9, gl.RGBA8, 256, 256);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    const draw = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, draw);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, lumTex, 0);
+    const read = gl.createFramebuffer()!;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, read);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, lumTex, 6);
+    this.lum = { tex: lumTex, draw, read };
     this.gainTex = gl.createTexture()!;
     gl.bindTexture(gl.TEXTURE_2D, this.gainTex);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, GRID, GRID, 0, gl.RED, gl.FLOAT, this.gains);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    // Nearest, not linear: blending with a neighbour's gain would let a
+    // strobing region leak through its edges.
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     canvas.addEventListener('webglcontextlost', (e) => {
@@ -187,6 +266,14 @@ export class VisualsRenderer {
     return s;
   }
 
+  /**
+   * Test helper: installs a scene from a GLSL body under a scene id (used by
+   * the safe-mode test to feed a picture that tries to strobe).
+   */
+  replaceScene(id: SceneId, body: string): void {
+    this.scenes.set(id, this.program(PRELUDE + body, ['uRes', 'uTime', 'uBeats', 'uKick', 'uSnare', 'uHat', 'uLow', 'uMid', 'uHigh', 'uEnergy', 'uMood', 'uBuild', 'uDrop', 'uBands']));
+  }
+
   /** Compiles every scene now (avoids a hitch the first time each one appears). */
   warmUp(): void {
     for (const s of SCENES) this.sceneProg(s.id);
@@ -216,6 +303,10 @@ export class VisualsRenderer {
   private ensureTargets(): void {
     const w = Math.max(64, Math.round(this.canvas.width * this.scale));
     const h = Math.max(36, Math.round(this.canvas.height * this.scale));
+    if (!this.f || this.f.w !== this.canvas.width || this.f.h !== this.canvas.height) {
+      this.free(this.f);
+      this.f = this.target(this.canvas.width, this.canvas.height, true);
+    }
     if (this.a && this.a.w === w && this.a.h === h) return;
     this.free(this.a);
     this.free(this.b);
@@ -301,75 +392,113 @@ export class VisualsRenderer {
       this.next = null;
     }
 
-    // Measure 4×4 regions.
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, M.tex);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this.probe.fb);
-    gl.viewport(0, 0, GRID, GRID);
-    gl.useProgram(this.probeP.p);
-    gl.uniform1i(this.probeP.u.uSrc, 0);
-    gl.uniform1f(this.probeP.u.uLod, Math.max(0, Math.log2(Math.max(M.w, M.h) / (GRID * 4))));
-    gl.drawArrays(gl.TRIANGLES, 0, 3);
-    gl.readPixels(0, 0, GRID, GRID, gl.RGBA, gl.UNSIGNED_BYTE, this.px);
+    // Measure the mixed picture, decide the gains, draw the final picture.
+    this.measure(M);
     this.limit(dt, f);
+    const F = this.f!;
+    this.drawFinal(M, F);
+    // Check what will really be shown; correct any region outside its limits.
+    this.measure(F);
+    let fix = false;
+    for (let i = 0; i < GRID * GRID; i++) {
+      const r = this.regions[i];
+      const m = this.measured[i];
+      if (m > r.hi + 0.003 && m > 0) {
+        this.gains[i] *= r.hi / m;
+        fix = true;
+      } else if (m < r.lo - 0.003) {
+        this.gains[i] = Math.min(4, this.gains[i] * (m > 0.002 ? r.lo / m : 2));
+        fix = true;
+      }
+    }
+    if (fix) {
+      this.drawFinal(M, F);
+      this.measure(F);
+    }
+    // The limiter follows what was actually shown.
+    for (let i = 0; i < GRID * GRID; i++) {
+      const r = this.regions[i];
+      r.out = this.measured[i];
+      feed(r.shown, r.out, this.clock, 1);
+    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.useProgram(this.copyP.p);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, F.tex);
+    gl.uniform1i(this.copyP.u.uSrc, 0);
+    gl.uniform2f(this.copyP.u.uSize, this.canvas.width, this.canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+  }
 
-    // Final picture on screen, with the gain map.
+  /** Exact relative luminance of each grid region of `t` into `this.measured`. */
+  private measure(t: Target): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, t.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.lum.draw);
+    gl.viewport(0, 0, 256, 256);
+    gl.useProgram(this.measureP.p);
+    gl.uniform1i(this.measureP.u.uSrc, 0);
+    gl.uniform1f(this.measureP.u.uLod, Math.max(0, Math.log2(Math.max(t.w, t.h) / 256)));
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    gl.bindTexture(gl.TEXTURE_2D, this.lum.tex);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.lum.read);
+    // A synchronous read (it waits for the GPU): the limit must apply to this
+    // very frame, or a one-frame flash could slip through.
+    gl.readPixels(0, 0, GRID, GRID, gl.RGBA, gl.UNSIGNED_BYTE, this.px);
+    for (let i = 0; i < GRID * GRID; i++) this.measured[i] = this.px[i * 4] / 255;
+  }
+
+  private drawFinal(M: Target, F: Target): void {
+    const gl = this.gl;
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.gainTex);
     gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, GRID, GRID, gl.RED, gl.FLOAT, this.gains);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    gl.viewport(0, 0, this.canvas.width, this.canvas.height);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, M.tex);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, F.fb);
+    gl.viewport(0, 0, F.w, F.h);
     gl.useProgram(this.finalP.p);
     gl.uniform1i(this.finalP.u.uSrc, 0);
     gl.uniform1i(this.finalP.u.uGain, 1);
-    gl.uniform2f(this.finalP.u.uSize, this.canvas.width, this.canvas.height);
+    gl.uniform2f(this.finalP.u.uSize, F.w, F.h);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  /** Slew-limits each region's luminance and turns the result into gains. */
+  /** Decides, per region, what may be shown this frame and the gain for it. */
   private limit(dt: number, f: FrameInput): void {
-    const max = MAX_RATE * dt;
-    const bright = f.blackout ? 0 : Math.max(0, Math.min(1, f.brightness));
+    // Brightness and blackout fade (never a cut).
+    const goal = f.blackout ? 0 : Math.max(0, Math.min(1, f.brightness));
+    this.light += Math.max(-0.5 * dt, Math.min(0.5 * dt, goal - this.light));
+    const now = this.clock;
     for (let i = 0; i < GRID * GRID; i++) {
-      const r = srgbToLinear(this.px[i * 4] / 255);
-      const g = srgbToLinear(this.px[i * 4 + 1] / 255);
-      const b = srgbToLinear(this.px[i * 4 + 2] / 255);
-      const lin = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-      const want = lin * bright;
-      const prev = this.lumaOut[i] < 0 ? Math.min(want, 0.05) : this.lumaOut[i];
-      const out = Math.min(prev + max, Math.max(prev - max, want));
-      this.lumaOut[i] = out;
-      // Linear gain, applied to sRGB values: g^(1/2.2).
-      const G = lin > 0.002 ? Math.min(4, out / lin) : out > 0.002 ? 4 : bright;
-      this.gains[i] = Math.pow(G, 1 / 2.2);
-      this.track(i, out);
-    }
-  }
-
-  private track(i: number, l: number): void {
-    const s = this.swings[i];
-    if (s.dir === 0) {
-      s.ref = l;
-      s.dir = 1;
-      return;
-    }
-    if (s.dir > 0) {
-      if (l > s.ref) s.ref = l;
-      else if (s.ref - l >= 0.1) {
-        s.times.push(this.clock);
-        s.dir = -1;
-        s.ref = l;
+      const r = this.regions[i];
+      const lin = this.measured[i];
+      const want = lin * this.light;
+      feed(r.want, want, now, 2);
+      if (r.want.times.length >= 3) r.smooth = true;
+      else if (r.want.times.length === 0) r.smooth = false;
+      let lo = 0;
+      let hi = 1;
+      if (r.out >= 0 && r.smooth) {
+        lo = r.out - MAX_RATE * dt;
+        hi = r.out + MAX_RATE * dt;
       }
-    } else {
-      if (l < s.ref) s.ref = l;
-      else if (l - s.ref >= 0.1) {
-        s.times.push(this.clock);
-        s.dir = 1;
-        s.ref = l;
+      // Hard cap: two flashes in the last second, then no new swing.
+      const recent = r.shown.times.filter((t) => now - t < 1).length;
+      if (r.out >= 0 && recent >= 4) {
+        if (r.shown.dir >= 0) lo = Math.max(lo, r.shown.ref - SWING + 0.006);
+        if (r.shown.dir <= 0) hi = Math.min(hi, r.shown.ref + SWING - 0.006);
       }
+      if (lo > hi) lo = hi;
+      const out = Math.min(hi, Math.max(lo, want));
+      r.lo = lo;
+      r.hi = hi;
+      this.gains[i] = lin > 0.004 ? Math.min(4, out / lin) : out > 0.004 ? 4 : this.light;
     }
-    while (s.times.length && this.clock - s.times[0] > 1) s.times.shift();
   }
 
   /**
@@ -383,6 +512,7 @@ export class VisualsRenderer {
     const px = new Uint8Array(w * h * 4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    // (Reads the screen itself, not the renderer's own measurement.)
     const sum = new Array(GRID * GRID).fill(0);
     const n = new Array(GRID * GRID).fill(0);
     for (let y = 0; y < h; y++) {
@@ -399,8 +529,13 @@ export class VisualsRenderer {
   /** Most flashes (pairs of opposite swings) seen in any region during the last second. */
   flashesPerSecond(): number {
     let most = 0;
-    for (const s of this.swings) most = Math.max(most, Math.floor(s.times.length / 2));
+    for (const r of this.regions) most = Math.max(most, Math.floor(r.shown.times.filter((t) => this.clock - t < 1).length / 2));
     return most;
+  }
+
+  /** How many regions are being smoothed right now (0 when the scene is calm). */
+  smoothing(): number {
+    return this.regions.filter((r) => r.smooth).length;
   }
 
   private adapt(dt: number): void {
@@ -424,7 +559,8 @@ export class VisualsRenderer {
     this.free(this.a);
     this.free(this.b);
     this.free(this.m);
-    this.free(this.probe);
+    this.free(this.f);
+    this.gl.deleteTexture(this.lum.tex);
     this.gl.getExtension('WEBGL_lose_context')?.loseContext();
   }
 }
