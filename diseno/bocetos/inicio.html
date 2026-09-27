@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>HOUSE · Inicio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&family=Big+Shoulders:opsz,wght@10..72,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chasis:#2A2724; --chasis-alto:#35312D; --pantalla:#181614; --surco:#12100F; --bisel:#3F3A35;
+  --tinta:#F3EDE2; --tinta-2:#B9B0A3; --tinta-3:#9A9185; --negro:#161412;
+  --naranja:#FF6B1A; --amarillo:#FFCB1F; --azul:#6F8BFF; --rosa:#F0168A; --verde:#7ED957; --turquesa:#19C2C2;
+  --papel:#F3EDE2; --papel-2:#E2D9C9;
+  --display:'Big Shoulders','Arial Narrow',sans-serif;
+  --ui:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#1E1C1A}
+body{font-family:var(--ui);color:var(--tinta);font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:left}
+.app{width:1440px;height:900px;background:var(--chasis);display:grid;grid-template-rows:60px 1fr 214px;overflow:hidden}
+.surco-b{position:relative}
+.surco-b::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+.surco-r{position:relative}
+.surco-r::after{content:"";position:absolute;top:0;bottom:0;right:-3px;width:3px;background:linear-gradient(90deg,var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+
+.top{display:flex;align-items:center;gap:12px;padding:0 16px 0 18px}
+.logo{font-family:var(--display);font-weight:900;font-size:30px;line-height:1}
+.espacio{flex:1}
+.btn{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:6px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 0 rgba(0,0,0,.45);font-weight:600}
+
+.medio{display:grid;grid-template-columns:1fr 520px;min-height:0}
+.cartel{padding:30px 40px 26px 40px;display:flex;flex-direction:column;min-height:0}
+.cartel h1{margin:0;font-family:var(--display);font-weight:900;font-size:124px;line-height:.9;letter-spacing:-.005em;white-space:nowrap}
+.cartel p{margin:26px 0 22px;font-size:16px;color:var(--tinta-2);max-width:60ch}
+.caminos{display:flex;flex-direction:column;gap:8px}
+.camino{display:grid;grid-template-columns:48px 1fr auto;align-items:center;gap:18px;height:64px;padding:0 22px 0 14px;border-radius:4px;background:var(--papel);color:var(--negro)}
+.camino b{font-family:var(--display);font-weight:900;font-size:42px;line-height:1}
+.camino span{font-size:14px;font-weight:600;color:#4A433C;max-width:30ch;text-align:right}
+.camino.sel{background:var(--amarillo);outline:3px solid var(--tinta);outline-offset:3px}
+.camino.sel span{color:var(--negro)}
+.camino:not(.sel):hover{background:var(--papel-2)}
+
+.estilos{padding:28px 32px 24px 30px;display:flex;flex-direction:column;gap:10px;min-height:0;background:var(--chasis)}
+.estilos h2{margin:0;font-family:var(--display);font-weight:800;font-size:28px;line-height:1}
+.estilos .nota{font-size:13px;color:var(--tinta-3);margin-top:-6px}
+.fila{display:grid;grid-template-columns:34px 1fr 150px;align-items:center;gap:14px;height:52px;padding:0 14px 0 12px;border-radius:6px;background:var(--pantalla)}
+.fila.sel{box-shadow:inset 0 0 0 2px var(--tinta)}
+.fila .play{width:34px;height:34px;border-radius:50%;background:var(--chasis-alto);display:inline-flex;align-items:center;justify-content:center;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.fila.sel .play{background:var(--tinta);color:var(--negro)}
+.fila b{font-family:var(--display);font-weight:800;font-size:24px;line-height:1;display:inline;margin-right:8px}
+.fila small{font-size:12px;color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.ritmo{display:grid;grid-template-rows:repeat(3,6px);gap:3px}
+.ritmo div{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+.ritmo i{width:6px;height:6px;border-radius:1px;background:#2F2B27}
+.mas{display:flex;justify-content:space-between;align-items:center;padding:4px 2px 0;color:var(--tinta-2);font-weight:600}
+.mas .etiquetas{display:flex;gap:6px;flex-wrap:wrap}
+.mas .etiquetas span{height:24px;padding:0 9px;border-radius:999px;background:var(--chasis-alto);font-size:12px;display:inline-flex;align-items:center;color:var(--tinta-2)}
+.trae{background:var(--pantalla);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.trae b{font-weight:700;font-size:14px}
+.trae ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.trae li{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--tinta-2);line-height:1.25}
+.trae li svg{flex:none}
+.acciones{margin-top:auto;display:flex;gap:10px}
+.cta{height:48px;padding:0 20px;border-radius:6px;background:var(--rosa);color:var(--negro);font-weight:800;font-size:16px;display:inline-flex;align-items:center;gap:10px;flex:1;justify-content:center}
+.sec-btn{height:48px;padding:0 18px;border-radius:6px;background:var(--chasis-alto);font-weight:700;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+
+.proyectos{background:var(--pantalla);padding:18px 40px 22px;display:flex;flex-direction:column;gap:12px}
+.proyectos header{display:flex;align-items:baseline;gap:14px}
+.proyectos h2{margin:0;font-family:var(--display);font-weight:800;font-size:24px;line-height:1}
+.proyectos header span{color:var(--tinta-3)}
+.proyectos header a{margin-left:auto;color:var(--tinta-2);font-weight:600;text-decoration:none}
+.tiras{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.proy{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:6px;background:var(--chasis)}
+.proy .mini{height:44px;display:flex;border-radius:3px;overflow:hidden;background:var(--papel)}
+.proy .mini div{border-right:2px solid var(--negro);display:flex;align-items:flex-end;padding:0 5px 3px;font-family:var(--display);font-weight:900;font-size:13px;color:var(--negro);line-height:1;white-space:nowrap;overflow:hidden}
+.proy .mini div:last-child{border-right:0}
+.proy .mini div.d{background:var(--amarillo)}
+.proy b{font-weight:700;font-size:14px}
+.proy small{display:flex;gap:8px;align-items:center;color:var(--tinta-3);font-size:12px}
+.proy small i{width:8px;height:8px;border-radius:2px;display:inline-block}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top surco-b">
+    <div class="logo">HOUSE</div>
+    <div class="espacio"></div>
+    <button class="btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="1" width="10" height="14"/><circle cx="8" cy="10" r="2.5"/></svg>Bocina + Audífonos</button>
+    <button class="btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 4h12M2 8h12M2 12h12"/><rect x="4" y="2" width="3" height="4" fill="var(--chasis-alto)"/><rect x="9" y="6" width="3" height="4" fill="var(--chasis-alto)"/><rect x="5" y="10" width="3" height="4" fill="var(--chasis-alto)"/></svg>Ajustes</button>
+  </header>
+
+  <section class="medio">
+    <div class="cartel surco-r">
+      <h1>¿Qué suena hoy?</h1>
+      <p>Elige por dónde empezar. Todo se puede cambiar después y nada se pierde.</p>
+      <div class="caminos" id="caminos"></div>
+    </div>
+
+    <aside class="estilos">
+      <h2>Elige un estilo</h2>
+      <div class="nota">Pasa el cursor para escuchar 8 compases de cada uno.</div>
+      <div id="generos" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="mas">
+        <span>Más estilos</span>
+        <div class="etiquetas"><span>Afro house</span><span>Trap</span><span>Tribal</span><span>Psytrance</span><span>+7</span></div>
+      </div>
+      <div class="trae">
+        <b>La plantilla de tech house trae</b>
+        <ul id="trae"></ul>
+      </div>
+      <div class="acciones">
+        <button class="cta">Empezar con tech house</button>
+        <button class="sec-btn">Proyecto vacío</button>
+      </div>
+    </aside>
+  </section>
+
+  <section class="proyectos">
+    <header><h2>Tus proyectos</h2><span>4 de 11</span><a href="#">Ver todos</a></header>
+    <div class="tiras" id="tiras"></div>
+  </section>
+</div>
+
+<script>
+const INK = {naranja:'#FF6B1A', amarillo:'#FFCB1F', azul:'#6F8BFF', rosa:'#F0168A', verde:'#7ED957', turquesa:'#19C2C2'};
+const PICT = {
+  bombo:  '<circle cx="14" cy="14" r="7.5" fill="none" stroke="#161412" stroke-width="3"/><circle cx="14" cy="14" r="2.5" fill="#161412"/>',
+  voz:    '<rect x="10" y="4" width="8" height="13" rx="4" fill="#161412"/><path d="M7 13a7 7 0 0 0 14 0" fill="none" stroke="#161412" stroke-width="2.2"/><rect x="13" y="20" width="2" height="4" fill="#161412"/>',
+  disco:  '<circle cx="14" cy="14" r="9" fill="#161412"/><circle cx="14" cy="14" r="3" fill="#FFCB1F"/><circle cx="14" cy="14" r="1" fill="#161412"/>',
+  pads:   '<rect x="5" y="5" width="8" height="8" rx="2" fill="#161412"/><rect x="15" y="5" width="8" height="8" rx="2" fill="#161412"/><rect x="5" y="15" width="8" height="8" rx="2" fill="#161412"/><rect x="15" y="15" width="8" height="8" rx="2" fill="#161412"/>',
+  retos:  '<path d="M14 4l2.6 6.2 6.4.5-4.9 4.2 1.5 6.3L14 17.8 8.4 21.2l1.5-6.3L5 10.7l6.4-.5z" fill="#161412"/>'
+};
+PICT.bajo = '<path d="M4 14c2.5-7 5.5-7 8 0s5.5 7 8 0 3-4 4-4" fill="none" stroke="#161412" stroke-width="3.2" stroke-linecap="square"/>';
+PICT.acordes = '<rect x="6" y="6" width="16" height="4" fill="#161412"/><rect x="6" y="12" width="16" height="4" fill="#161412"/><rect x="6" y="18" width="16" height="4" fill="#161412"/>';
+PICT.subida = '<path d="M5 21 L23 7 L23 21 Z" fill="#161412"/>';
+const pict = (k, ink, s = 48) => `<svg width="${s}" height="${s}" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="${INK[ink]}"/>${PICT[k]}</svg>`;
+
+const caminos = [
+  ['bombo','naranja','Hacer un beat','Batería, bajo y acordes con una plantilla que ya suena', true],
+  ['voz','rosa','Grabar mi voz','Micro listo en un minuto, con tomas y afinación'],
+  ['disco','amarillo','Mezclar como DJ','Tus proyectos en dos decks, audífonos y bocina'],
+  ['pads','verde','Tocar pads','Tu teclado se vuelve 32 pads para jugar'],
+  ['retos','azul','Aprender con retos','Misiones de 5 minutos dentro de la app'],
+];
+document.getElementById('trae').innerHTML = [
+  ['bombo','naranja','Kit Madrugada con shaker y conga'],
+  ['bajo','amarillo','Bajo ácido rodante con bombeo'],
+  ['acordes','azul','Stab de órgano en La menor'],
+  ['subida','turquesa','72 compases con intro y salida para DJ'],
+].map(([p,c,t]) => `<li>${pict(p,c,26)}${t}</li>`).join('');
+document.getElementById('caminos').innerHTML = caminos.map(([p,c,t,d,sel]) =>
+  `<button class="camino${sel?' sel':''}">${pict(p,c)}<b>${t}</b><span>${d}</span></button>`).join('');
+
+// ritmos: [bombo, caja/palmas, hat]
+const X=1,_=0;
+const generos = [
+  ['Tech house','126 BPM',[[X,_,_,_,X,_,_,_,X,_,_,_,X,_,_,_],[_,_,_,_,X,_,_,_,_,_,_,_,X,_,_,_],[_,_,X,_,_,_,X,_,_,_,X,_,_,_,X,_]], true],
+  ['Techno','132 BPM',[[X,_,_,_,X,_,_,_,X,_,_,_,X,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],[X,X,X,X,X,X,X,X,X,X,X,X,X,X,X,X]]],
+  ['House','124 BPM',[[X,_,_,_,X,_,_,_,X,_,_,_,X,_,_,_],[_,_,_,_,X,_,_,_,_,_,_,_,X,_,_,_],[_,_,X,_,_,_,X,_,_,_,X,_,_,_,X,_]]],
+  ['Reggaetón','95 BPM',[[X,_,_,_,X,_,_,_,X,_,_,_,X,_,_,_],[_,_,_,X,_,_,X,_,_,_,_,X,_,_,X,_],[X,_,X,_,X,_,X,_,X,_,X,_,X,_,X,_]]],
+  ['Lo-fi','82 BPM',[[X,_,_,_,_,_,_,_,_,_,X,_,_,_,_,_],[_,_,_,_,X,_,_,_,_,_,_,_,X,_,_,_],[X,_,X,_,X,_,X,_,X,_,X,_,X,_,X,X]]],
+];
+const colores = ['#FF6B1A','#F3EDE2','#9A9185'];
+document.getElementById('generos').innerHTML = generos.map(([n,b,r,sel]) => `
+  <div class="fila${sel?' sel':''}">
+    <button class="play" aria-label="Escuchar ${n}"><svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z" fill="currentColor"/></svg></button>
+    <div><b>${n}</b><small>${b}</small></div>
+    <div class="ritmo" aria-hidden="true">${r.map((fila,fi) => `<div>${fila.map(v => `<i style="${v?`background:${colores[fi]}`:''}"></i>`).join('')}</div>`).join('')}</div>
+  </div>`).join('');
+
+const proyectos = [
+  ['Madrugada en la azotea','Tech house, 126 BPM','hace 12 s','naranja',[['Intro',16],['Sub',8],['¡Drop!',16,1],['Pausa',8],['¡Drop!',16],['Sal',8]]],
+  ['Perreo en la lluvia','Reggaetón, 95 BPM','ayer','rosa',[['Intro',4],['Verso',16],['Coro',8,1],['Verso',16],['Coro',8],['Sal',4]]],
+  ['Túnel 03','Techno, 132 BPM','hace 3 días','amarillo',[['Intro',32],['Subida',16],['¡Drop!',32,1],['Salida',16]]],
+  ['Para estudiar','Lo-fi, 82 BPM','la semana pasada','azul',[['A',8],['B',8,1],['A',8],['Cierre',4]]],
+];
+document.getElementById('tiras').innerHTML = proyectos.map(([n,g,t,c,secs]) => {
+  const tot = secs.reduce((a,s)=>a+s[1],0);
+  return `<div class="proy"><div class="mini">${secs.map(([s,l,d]) => `<div class="${d?'d':''}" style="width:${l/tot*100}%">${s}</div>`).join('')}</div>
+  <b>${n}</b><small><i style="background:${INK[c]}"></i>${g}, ${t}</small></div>`;
+}).join('');
+</script>
+</body>
+</html>

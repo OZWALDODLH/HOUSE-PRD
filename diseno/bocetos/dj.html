@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>HOUSE · Cabina DJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&family=Big+Shoulders:opsz,wght@10..72,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chasis:#2A2724; --chasis-alto:#35312D; --pantalla:#181614; --surco:#12100F; --bisel:#3F3A35;
+  --tinta:#F3EDE2; --tinta-2:#B9B0A3; --tinta-3:#9A9185; --negro:#161412;
+  --naranja:#FF6B1A; --amarillo:#FFCB1F; --azul:#6F8BFF; --rosa:#F0168A; --verde:#7ED957; --turquesa:#19C2C2;
+  --papel:#F3EDE2; --papel-2:#E2D9C9;
+  --display:'Big Shoulders','Arial Narrow',sans-serif;
+  --ui:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#1E1C1A}
+body{font-family:var(--ui);color:var(--tinta);font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.app{width:1440px;height:900px;background:var(--chasis);display:grid;grid-template-rows:60px 44px 132px 402px 1fr;overflow:hidden}
+.surco-b{position:relative}
+.surco-b::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+.surco-r{position:relative}
+.surco-r::after{content:"";position:absolute;top:0;bottom:0;right:-3px;width:3px;background:linear-gradient(90deg,var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+.surco-l{position:relative}
+.surco-l::before{content:"";position:absolute;top:0;bottom:0;left:-3px;width:3px;background:linear-gradient(90deg,var(--bisel) 0 1px,var(--surco) 1px 3px);z-index:2}
+
+.top{display:flex;align-items:center;gap:14px;padding:0 16px 0 18px}
+.logo{font-family:var(--display);font-weight:900;font-size:30px;line-height:1;margin-right:6px}
+.sesion b{display:block;font-weight:700;font-size:14px}
+.sesion span{color:var(--tinta-3);font-size:12px}
+.sep{width:1px;height:32px;background:var(--bisel)}
+.btn{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:6px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 0 rgba(0,0,0,.45);font-weight:600}
+.btn.rec{background:var(--rosa);color:var(--negro);font-weight:800}
+.lcd{background:var(--pantalla);border-radius:6px;height:44px;display:flex;align-items:center;gap:12px;padding:0 12px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.lcd small{display:block;font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3);line-height:1}
+.lcd .n{font-variant-numeric:tabular-nums;font-weight:600;font-size:18px}
+.espacio{flex:1}
+.salidas{display:flex;align-items:center;gap:14px;height:44px;padding:0 14px;border-radius:6px;background:var(--pantalla)}
+.salidas .s{display:flex;flex-direction:column;line-height:1.2}
+.salidas .s small{font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3)}
+.salidas .s b{font-weight:700;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.aviso{display:inline-flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:999px;background:var(--amarillo);color:var(--negro);font-size:11px;font-weight:700}
+.bocina{display:flex;align-items:center;gap:8px}
+.vu{display:flex;flex-direction:column;gap:3px}
+.vu .fila{display:flex;gap:1px}
+.vu .fila i{width:3px;height:9px;background:#3a3531;display:block}
+.vu .fila i.v{background:var(--verde)} .vu .fila i.a{background:var(--amarillo)}
+
+.pestanas{display:flex;align-items:flex-end;gap:2px;padding:0 16px}
+.pestanas > button{height:36px;padding:0 16px;border-radius:6px 6px 0 0;font-family:var(--display);font-weight:800;font-size:19px;color:var(--tinta-3);display:inline-flex;align-items:center;gap:8px}
+.pestanas > button small{font-family:var(--ui);font-weight:500;font-size:11px;color:var(--tinta-3)}
+.pestanas > button.on{background:var(--pantalla);color:var(--tinta)}
+.pestanas .derecha{margin-left:auto;align-self:center;display:flex;gap:8px}
+.btn-vis{height:30px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:6px;background:var(--chasis-alto);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.btn-vis kbd{font:inherit;font-size:11px;color:var(--tinta-3)}
+
+/* formas de onda apiladas */
+.ondas{background:var(--pantalla);padding:8px 16px 10px;display:grid;grid-template-rows:1fr 1fr;gap:6px;position:relative}
+.onda{position:relative;border-radius:3px;overflow:hidden;background:#141210}
+.onda .letra{position:absolute;left:0;top:0;bottom:0;width:26px;display:flex;align-items:center;justify-content:center;background:var(--pantalla);font-family:var(--display);font-weight:900;font-size:18px;line-height:1;z-index:2;color:var(--tinta)}
+.onda svg{position:absolute;inset:0;width:100%;height:100%}
+.centro{position:absolute;left:50%;top:4px;bottom:6px;width:2px;background:var(--tinta);z-index:3;transform:translateX(-1px)}
+.bandera{position:absolute;top:4px;z-index:2;height:18px;padding:0 6px;border-radius:2px;background:var(--papel);color:var(--negro);font-family:var(--display);font-weight:900;font-size:13px;display:flex;align-items:center}
+.bandera.drop{background:var(--amarillo)}
+
+/* decks + mezclador */
+.cabina{display:grid;grid-template-columns:1fr 330px 1fr;grid-template-rows:402px;min-height:0}
+.deck{padding:12px 16px;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0;overflow:hidden}
+.deck-cab{display:grid;grid-template-columns:38px 1fr auto;gap:12px;align-items:center;height:46px}
+.letra-deck{width:38px;height:38px;border-radius:6px;background:var(--tinta);color:var(--negro);font-family:var(--display);font-weight:900;font-size:26px;display:flex;align-items:center;justify-content:center}
+.titulo b{display:block;font-weight:700;font-size:15px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.titulo span{font-size:12px;color:var(--tinta-3);display:inline-flex;gap:8px;align-items:center}
+.etq{height:18px;padding:0 6px;border-radius:3px;background:var(--chasis-alto);color:var(--tinta-2);font-size:11px;font-weight:700;display:inline-flex;align-items:center}
+.lecturas{display:flex;gap:14px;align-items:flex-end;text-align:right}
+.lecturas div small{display:block;font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3);line-height:1}
+.lecturas .grande{font-family:var(--display);font-weight:900;font-size:32px;line-height:1}
+.lecturas .med{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums}
+.general{position:relative;height:34px;border-radius:3px;background:var(--pantalla);overflow:hidden}
+.general svg{position:absolute;inset:0;width:100%;height:100%}
+.medio-deck{display:grid;grid-template-columns:160px 1fr 64px;gap:14px;min-height:0;flex:1}
+.jog{width:160px;height:160px;align-self:center}
+.col{display:flex;flex-direction:column;gap:8px;min-width:0}
+.fila-b{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.stem{height:34px;border-radius:6px;background:var(--chasis-alto);display:flex;align-items:center;gap:8px;padding:0 8px;font-weight:700;font-size:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.stem.off{background:var(--pantalla);color:var(--tinta-3);box-shadow:none}
+.stem.off svg{opacity:.35}
+.cues{display:grid;grid-template-columns:repeat(8,1fr);gap:5px}
+.cue{height:34px;border-radius:6px;background:var(--chasis-alto);font-family:var(--display);font-weight:900;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--tinta-3);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.cue.set{background:var(--tinta);color:var(--negro)}
+.loops{display:flex;gap:4px;align-items:center}
+.loops span{font-size:12px;color:var(--tinta-3);margin-right:4px}
+.loops button{height:28px;min-width:34px;padding:0 6px;border-radius:4px;background:var(--pantalla);font-weight:700;font-size:12px;color:var(--tinta-2)}
+.loops button.on{background:var(--tinta);color:var(--negro)}
+.transp{display:flex;gap:8px;margin-top:auto}
+.play,.cuebtn{height:48px;flex:1;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:800;font-size:15px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 0 rgba(0,0,0,.45)}
+.play{background:var(--chasis-alto)}
+.play.on{background:var(--tinta);color:var(--negro)}
+.cuebtn{background:var(--chasis-alto);flex:.6}
+.sync{height:48px;padding:0 14px;border-radius:8px;background:var(--chasis-alto);font-family:var(--display);font-weight:900;font-size:18px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 0 rgba(0,0,0,.45)}
+.sync.on{background:var(--tinta);color:var(--negro)}
+.tempo{display:flex;flex-direction:column;align-items:center;gap:6px}
+.tempo small{font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3)}
+.tempo output{font-variant-numeric:tabular-nums;font-weight:700;font-size:12px}
+.riel{position:relative;width:6px;flex:1;border-radius:3px;background:var(--pantalla)}
+.riel::before{content:"";position:absolute;left:-8px;right:-8px;top:50%;height:2px;background:var(--bisel)}
+.riel i{position:absolute;left:-13px;width:32px;height:16px;border-radius:3px;background:var(--tinta-2);box-shadow:inset 0 -3px 0 rgba(0,0,0,.25)}
+.riel i::after{content:"";position:absolute;left:4px;right:4px;top:7px;height:2px;background:var(--negro)}
+.klock{height:24px;padding:0 6px;border-radius:4px;background:var(--tinta);color:var(--negro);font-size:11px;font-weight:800;white-space:nowrap}
+.fx{display:flex;gap:4px;align-items:center}
+.fx span{font-size:12px;color:var(--tinta-3);margin-right:4px}
+.fx button{height:28px;padding:0 9px;border-radius:4px;background:var(--pantalla);font-weight:700;font-size:12px;color:var(--tinta-2)}
+.fx button.on{background:var(--turquesa);color:var(--negro)}
+
+/* mezclador */
+.mezclador{background:var(--chasis);padding:10px 14px 12px;display:grid;grid-template-rows:auto 1fr auto;gap:8px;min-height:0}
+.mezclador h3{margin:0;font-family:var(--display);font-weight:900;font-size:18px;line-height:1;text-align:center;color:var(--tinta-2)}
+.canales{display:grid;grid-template-columns:1fr 70px 1fr;gap:8px;min-height:0}
+.canal{display:grid;grid-template-columns:1fr 40px;gap:4px;background:var(--pantalla);border-radius:6px;padding:8px 6px 8px}
+.canal .perillas-c{display:flex;flex-direction:column;align-items:center;gap:2px}
+.canal .fader-c{display:flex;flex-direction:column;align-items:center;gap:8px}
+.canal .k{display:flex;flex-direction:column;align-items:center}
+.canal .k small{font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-2);margin-top:-3px}
+.fader-v{display:flex;gap:6px;align-items:stretch;flex:1}
+.medidor{display:flex;flex-direction:column-reverse;gap:1px;width:5px}
+.medidor i{flex:1;background:#2c2825;display:block}
+.medidor i.v{background:var(--verde)} .medidor i.a{background:var(--amarillo)} .medidor i.r{background:var(--rosa)}
+.audif{width:36px;height:28px;border-radius:5px;background:var(--chasis-alto);display:flex;align-items:center;justify-content:center}
+.audif.on{background:var(--tinta);color:var(--negro)}
+.maestro{display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:4px}
+.maestro .k small{font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-2);text-align:center;display:block;margin-top:-3px;line-height:1.1}
+.cross{display:flex;align-items:center;gap:10px;justify-content:center}
+.cross b{font-family:var(--display);font-weight:900;font-size:16px;color:var(--tinta-3)}
+.riel-h{position:relative;height:6px;width:180px;border-radius:3px;background:var(--pantalla)}
+.riel-h i{position:absolute;top:-10px;left:calc(50% - 9px);width:18px;height:26px;border-radius:3px;background:var(--tinta-2);box-shadow:inset -3px 0 0 rgba(0,0,0,.25)}
+.riel-h i::after{content:"";position:absolute;top:4px;bottom:4px;left:8px;width:2px;background:var(--negro)}
+
+/* biblioteca */
+.biblioteca{display:grid;grid-template-columns:230px 1fr;background:var(--pantalla);min-height:0}
+.fuentes{padding:12px 12px;display:flex;flex-direction:column;gap:2px;background:var(--chasis)}
+.fuentes h3{margin:2px 6px 8px;font-family:var(--display);font-weight:900;font-size:20px;line-height:1}
+.fuente{display:flex;justify-content:space-between;align-items:center;height:30px;padding:0 8px;border-radius:5px;font-weight:600;color:var(--tinta-2)}
+.fuente span{font-size:12px;color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.fuente.on{background:var(--chasis-alto);color:var(--tinta);box-shadow:inset 0 0 0 2px var(--tinta)}
+.fuente-t{font-family:var(--display);font-weight:700;font-size:12px;color:var(--tinta-3);margin:8px 8px 2px}
+.tabla{padding:8px 16px 0;min-width:0;overflow:hidden}
+.tabla table{width:100%;border-collapse:separate;border-spacing:0 3px}
+.tabla th{font-family:var(--display);font-weight:700;font-size:12px;color:var(--tinta-3);text-align:left;padding:2px 10px;height:22px}
+.tabla td{padding:0 10px;height:30px;background:#1F1C1A;font-size:13px;white-space:nowrap}
+.tabla td:first-child{border-radius:5px 0 0 5px}
+.tabla td:last-child{border-radius:0 5px 5px 0}
+.tabla td.num{font-variant-numeric:tabular-nums;color:var(--tinta-2)}
+.tabla tr.en td{background:#26221F}
+.tabla .nombre{display:flex;align-items:center;gap:10px;font-weight:700}
+.tabla .nombre i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.tono{display:inline-flex;align-items:center;gap:6px}
+.tono b{font-family:var(--display);font-weight:900;font-size:15px;min-width:26px}
+.energia{display:flex;gap:2px}
+.energia i{width:6px;height:12px;border-radius:1px;background:#3a3531;display:block}
+.energia i.on{background:var(--tinta-2)}
+.pill{height:22px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;display:inline-flex;align-items:center;gap:6px}
+.pill.en{background:var(--chasis-alto);color:var(--tinta)}
+.pill.combina{background:var(--verde);color:var(--negro)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top surco-b">
+    <div class="logo">HOUSE</div>
+    <div class="sesion"><b>Viernes en casa</b><span>Set de 11 tracks, 3 ya sonaron</span></div>
+    <div class="sep"></div>
+    <button class="btn rec"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--negro)"/></svg>Grabando set</button>
+    <div class="lcd"><div><small>Duración</small><span class="n">00:42:10</span></div><div><small>Tempo maestro</small><span class="n">126.0</span></div></div>
+    <div class="espacio"></div>
+    <div class="salidas" aria-label="Salidas de audio">
+      <div class="s"><small>Master</small><b><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="1" width="10" height="14"/><circle cx="8" cy="10" r="2.5"/></svg>Bocina Bluetooth</b></div>
+      <span class="aviso"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M5 .5 9.5 9H.5z" fill="var(--negro)"/></svg>Alineada, 182 ms</span>
+      <div class="s"><small>Pre-escucha</small><b><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12V8a6 6 0 0 1 12 0v4"/><rect x="1.5" y="10" width="3.5" height="5"/><rect x="11" y="10" width="3.5" height="5"/></svg>Audífonos (USB)</b></div>
+    </div>
+    <div class="bocina" aria-label="Nivel maestro">
+      <svg width="46" height="46" viewBox="0 0 46 46"><circle cx="23" cy="23" r="22" fill="#1D1B19"/><circle cx="23" cy="23" r="19.5" fill="none" stroke="#403A34" stroke-width="3"/><circle cx="23" cy="23" r="16" fill="#26231F"/><circle cx="23" cy="23" r="12.5" fill="none" stroke="#302C28" stroke-width="1.5"/><circle cx="23" cy="23" r="9" fill="none" stroke="#302C28" stroke-width="1.5"/><circle cx="23" cy="23" r="5.5" fill="var(--tinta-3)"/></svg>
+      <div class="vu"><div class="fila" id="vuL"></div><div class="fila" id="vuR"></div></div>
+    </div>
+  </header>
+
+  <nav class="pestanas" aria-label="Espacios">
+    <button>Patrón <small>F1</small></button>
+    <button>Canción <small>F2</small></button>
+    <button>Mezcla <small>F3</small></button>
+    <button>Voz <small>F4</small></button>
+    <button class="on">DJ <small>F5</small></button>
+    <div class="derecha">
+      <button class="btn-vis"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="16" height="11"/><path d="M6 15h6M9 12v3"/><circle cx="9" cy="6.5" r="2.2"/></svg>Visuales<kbd>F6</kbd></button>
+    </div>
+  </nav>
+
+  <section class="ondas" aria-label="Formas de onda">
+    <div class="onda"><span class="letra">A</span><svg id="ondaA" viewBox="0 0 1408 52" preserveAspectRatio="none"></svg><span class="bandera drop" style="left:61%">¡Drop!</span></div>
+    <div class="onda"><span class="letra">B</span><svg id="ondaB" viewBox="0 0 1408 52" preserveAspectRatio="none"></svg><span class="bandera" style="left:78%">Subida</span></div>
+    <div class="centro"></div>
+  </section>
+
+  <section class="cabina">
+    <!-- DECK A -->
+    <div class="deck surco-r" id="deckA"></div>
+    <!-- MEZCLADOR -->
+    <div class="mezclador">
+      <h3>Mezclador</h3>
+      <div class="canales">
+        <div class="canal" id="canalA"></div>
+        <div class="maestro" id="maestro"></div>
+        <div class="canal" id="canalB"></div>
+      </div>
+      <div class="cross"><b>A</b><div class="riel-h" aria-label="Crossfader"><i style="left:calc(38% - 9px)"></i></div><b>B</b></div>
+    </div>
+    <!-- DECK B -->
+    <div class="deck surco-l" id="deckB"></div>
+  </section>
+
+  <section class="biblioteca">
+    <aside class="fuentes surco-r">
+      <h3>Biblioteca</h3>
+      <div class="fuente on">Tus proyectos <span>11</span></div>
+      <div class="fuente">Importados <span>124</span></div>
+      <div class="fuente-t">Listas</div>
+      <div class="fuente">Viernes en casa <span>11</span></div>
+      <div class="fuente">Para calentar <span>18</span></div>
+      <div class="fuente">Perreo <span>23</span></div>
+    </aside>
+    <div class="tabla">
+      <table>
+        <thead><tr><th>Título</th><th>Estilo</th><th>BPM</th><th>Tono</th><th>Energía</th><th>Duración</th><th>Stems</th><th></th></tr></thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+const INK = {naranja:'#FF6B1A', amarillo:'#FFCB1F', azul:'#6F8BFF', rosa:'#F0168A', verde:'#7ED957', turquesa:'#19C2C2'};
+const PICT = {
+  bombo:  '<circle cx="14" cy="14" r="7.5" fill="none" stroke="#161412" stroke-width="3"/><circle cx="14" cy="14" r="2.5" fill="#161412"/>',
+  bajo:   '<path d="M4 14c2.5-7 5.5-7 8 0s5.5 7 8 0 3-4 4-4" fill="none" stroke="#161412" stroke-width="3.2" stroke-linecap="square"/>',
+  acordes:'<rect x="6" y="6" width="16" height="4" fill="#161412"/><rect x="6" y="12" width="16" height="4" fill="#161412"/><rect x="6" y="18" width="16" height="4" fill="#161412"/>',
+  voz:    '<rect x="10" y="4" width="8" height="13" rx="4" fill="#161412"/><path d="M7 13a7 7 0 0 0 14 0" fill="none" stroke="#161412" stroke-width="2.2"/><rect x="13" y="20" width="2" height="4" fill="#161412"/>',
+};
+const pict = (k, ink, s = 24) => `<svg width="${s}" height="${s}" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="${INK[ink]}"/>${PICT[k]}</svg>`;
+const vu = (n) => Array.from({length:14}, (_, i) => `<i class="${i < n ? (i > 10 ? 'a' : 'v') : ''}"></i>`).join('');
+document.getElementById('vuL').innerHTML = vu(12); document.getElementById('vuR').innerHTML = vu(11);
+
+/* ---------- formas de onda de 3 bandas ---------- */
+function rnd(seed){ let x = Math.sin(seed)*10000; return x - Math.floor(x); }
+function onda(id, beatPx, off, densHat, seed){
+  const W = 1408, H = 52, mid = H/2; let lows='', mids='', highs='', grid='';
+  for (let x = 0; x < W; x += 2){
+    const ph = ((x + off) % beatPx) / beatPx;
+    const beatIdx = Math.floor((x + off) / beatPx);
+    const kick = Math.exp(-ph*5.5);
+    const clap = (beatIdx % 2 === 1) ? Math.exp(-Math.abs(ph-.02)*14)*.5 : 0;
+    const hat = densHat ? (Math.exp(-(((ph*2)%1))*9)*.35) : (Math.exp(-Math.abs(ph-.5)*18)*.4);
+    const n = rnd(x*.37+seed);
+    const l = Math.min(1, .12 + kick*.8) * (mid-1) * .92;
+    const m = Math.min(1, .16 + clap + n*.14 + kick*.14) * (mid-1) * .5;
+    const h = Math.min(1, .06 + hat + n*.1) * (mid-1) * .34;
+    lows += `M${x} ${(mid-l).toFixed(1)}V${(mid+l).toFixed(1)}`;
+    mids += `M${x} ${(mid-m).toFixed(1)}V${(mid+m).toFixed(1)}`;
+    highs += `M${x} ${(mid-h).toFixed(1)}V${(mid+h).toFixed(1)}`;
+  }
+  for (let b = -((off) % beatPx); b < W; b += beatPx) grid += `M${b.toFixed(1)} 0V${H}`;
+  document.getElementById(id).innerHTML =
+    `<path d="${grid}" stroke="#3a3531" stroke-width="1"/>` +
+    `<path d="${lows}" stroke="${INK.amarillo}" stroke-width="1.6"/>` +
+    `<path d="${mids}" stroke="${INK.naranja}" stroke-width="1.6"/>` +
+    `<path d="${highs}" stroke="#F3EDE2" stroke-width="1.6"/>`;
+}
+onda('ondaA', 88, 30, false, 3);
+onda('ondaB', 88, 30, true, 11);
+
+/* ---------- perillas ---------- */
+function perilla(valor, ink, size = 40, centro = false){
+  const r = size*.4, cx = size/2, cy = size/2, a0 = 135, a1 = 405;
+  const pol = (a, rr=r) => { const t = a*Math.PI/180; return [cx + rr*Math.cos(t), cy + rr*Math.sin(t)]; };
+  const arco = (from, to) => { const [x0,y0] = pol(from), [x1,y1] = pol(to); const big = Math.abs(to-from) > 180 ? 1 : 0; const sw = to > from ? 1 : 0; return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${big} ${sw} ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  const av = a0 + (a1-a0)*valor; const desde = centro ? 270 : a0;
+  const [ix,iy] = pol(av, r*.35), [ox,oy] = pol(av, r*.78);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <path d="${arco(a0,a1)}" fill="none" stroke="#2b2724" stroke-width="${size*.08}"/>
+    ${Math.abs(av-desde) > .5 ? `<path d="${arco(Math.min(desde,av),Math.max(desde,av))}" fill="none" stroke="${ink}" stroke-width="${size*.08}"/>` : ''}
+    <circle cx="${cx}" cy="${cy}" r="${r*.72}" fill="#35312D"/>
+    <line x1="${ix.toFixed(2)}" y1="${iy.toFixed(2)}" x2="${ox.toFixed(2)}" y2="${oy.toFixed(2)}" stroke="#F3EDE2" stroke-width="${size*.06}"/>
+  </svg>`;
+}
+
+/* ---------- decks ---------- */
+function general(played, secciones){
+  const W = 600, H = 34; let bars = '';
+  for (let x = 0; x < W; x += 3){
+    const env = .35 + .5*Math.abs(Math.sin(x*.012)) * (x > 250 && x < 420 ? 1.3 : 1);
+    const h = Math.min(.95, env*(.7 + rnd(x*.9)*.3))*(H/2 - 3);
+    bars += `<rect x="${x}" y="${(H/2+2-h).toFixed(1)}" width="2" height="${(h*2).toFixed(1)}" fill="${x/W < played ? '#6b635b' : '#B9B0A3'}"/>`;
+  }
+  let sec = '', acc = 0; const tot = secciones.reduce((a,s)=>a+s[1],0);
+  secciones.forEach(([n,l,d]) => { sec += `<rect x="${(acc/tot*W).toFixed(1)}" y="0" width="${(l/tot*W-1).toFixed(1)}" height="3" fill="${d?INK.amarillo:'#F3EDE2'}"/>`; acc += l; });
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${sec}${bars}<rect x="${(played*W).toFixed(1)}" y="0" width="2" height="${H}" fill="${INK.rosa}"/></svg>`;
+}
+function jog(ang, color){
+  let marks = '';
+  for (let i = 0; i < 48; i++){ const a = i*7.5*Math.PI/180; const r1 = 72, r2 = i%4 ? 76 : 79; marks += `<line x1="${(80+r1*Math.cos(a)).toFixed(1)}" y1="${(80+r1*Math.sin(a)).toFixed(1)}" x2="${(80+r2*Math.cos(a)).toFixed(1)}" y2="${(80+r2*Math.sin(a)).toFixed(1)}" stroke="#4a443e" stroke-width="1.5"/>`; }
+  const a = ang*Math.PI/180;
+  return `<svg class="jog" viewBox="0 0 160 160" aria-hidden="true">
+    <circle cx="80" cy="80" r="79" fill="#1D1B19"/>${marks}
+    <circle cx="80" cy="80" r="66" fill="#26231F"/>
+    <circle cx="80" cy="80" r="58" fill="none" stroke="#2F2B27" stroke-width="10"/>
+    <line x1="${(80+40*Math.cos(a)).toFixed(1)}" y1="${(80+40*Math.sin(a)).toFixed(1)}" x2="${(80+64*Math.cos(a)).toFixed(1)}" y2="${(80+64*Math.sin(a)).toFixed(1)}" stroke="#F3EDE2" stroke-width="4"/>
+    <circle cx="80" cy="80" r="34" fill="${color}"/>
+    <text x="80" y="78" text-anchor="middle" font-family="Big Shoulders" font-weight="900" font-size="22" fill="#161412">−2:18</text>
+    <text x="80" y="95" text-anchor="middle" font-family="Atkinson Hyperlegible Next" font-weight="700" font-size="11" fill="#161412">de 4:51</text>
+  </svg>`;
+}
+function deck(d){
+  return `
+  <div class="deck-cab">
+    <div class="letra-deck">${d.letra}</div>
+    <div class="titulo"><b>${d.titulo}</b><span><span class="etq">${d.origen}</span>${d.estilo}</span></div>
+    <div class="lecturas">
+      <div><small>Tono</small><span class="med">${d.tono}</span></div>
+      <div><small>${d.bpmEt}</small><span class="grande">${d.bpm}</span></div>
+    </div>
+  </div>
+  <div class="general">${general(d.avance, d.secciones)}</div>
+  <div class="medio-deck">
+    ${jog(d.ang, d.color)}
+    <div class="col">
+      <div class="fila-b">
+        <button class="stem${d.stems[0]?'':' off'}">${pict('bombo','naranja')}Batería</button>
+        <button class="stem${d.stems[1]?'':' off'}">${pict('bajo','amarillo')}Bajo</button>
+        <button class="stem${d.stems[2]?'':' off'}">${pict('acordes','azul')}Melodía</button>
+        <button class="stem${d.stems[3]?'':' off'}">${pict('voz','rosa')}Voz</button>
+      </div>
+      <div class="cues">${[1,2,3,4,5,6,7,8].map(n => `<button class="cue${d.cues.includes(n)?' set':''}">${n}</button>`).join('')}</div>
+      <div class="loops"><span>Loop</span>${['1/2','1','2','4','8','16'].map(l => `<button class="${l===d.loop?'on':''}">${l}</button>`).join('')}</div>
+      <div class="fx"><span>Efecto</span>${['Eco','Reverb','Roll','Subida'].map(f => `<button class="${f===d.fx?'on':''}">${f}</button>`).join('')}</div>
+      <div class="transp">
+        <button class="cuebtn">Cue</button>
+        <button class="play${d.suena?' on':''}"><svg width="14" height="14" viewBox="0 0 14 14"><path d="M2 1l11 6-11 6z" fill="currentColor"/></svg>${d.suena?'Sonando':'Reproducir'}</button>
+        <button class="sync${d.sync?' on':''}">Sync</button>
+      </div>
+    </div>
+    <div class="tempo">
+      <small>Tempo</small>
+      <div class="riel"><i style="top:calc(${d.fader}% - 8px)"></i></div>
+      <output>${d.tempo}</output>
+      <button class="klock">Tono fijo</button>
+    </div>
+  </div>`;
+}
+document.getElementById('deckA').innerHTML = deck({letra:'A', titulo:'Madrugada en la azotea', origen:'Tu proyecto', estilo:'Tech house', tono:'8A La menor', bpmEt:'BPM', bpm:'126.0', avance:.53, ang:-40, color:INK.naranja,
+  secciones:[['Intro',16],['Sub',8],['Drop',16,1],['Pausa',8],['Drop',16,1],['Sal',8]], stems:[1,1,1,0], cues:[1,2,3,5], loop:'', suena:true, sync:false, fader:50, tempo:'0.0%'});
+document.getElementById('deckB').innerHTML = deck({letra:'B', titulo:'Túnel 03', origen:'Tu proyecto', estilo:'Techno', tono:'8A La menor', bpmEt:'BPM (original 132)', bpm:'126.0', avance:.12, ang:110, color:INK.amarillo,
+  secciones:[['Intro',32],['Subida',16],['Drop',32,1],['Salida',16]], stems:[1,1,1,1], cues:[1,2,4], loop:'8', fx:'Eco', suena:true, sync:true, fader:64, tempo:'−4.5%'});
+
+/* ---------- mezclador ---------- */
+const med = (n) => Array.from({length:16}, (_, i) => `<i class="${i < n ? (i >= 14 ? 'r' : i >= 11 ? 'a' : 'v') : ''}"></i>`).join('');
+function canal(eq, filtro, cueOn, fader, nivel){
+  return `
+    <div class="perillas-c">
+      <div class="k">${perilla(.5,'#F3EDE2',30,true)}<small>Ganancia</small></div>
+      <div class="k">${perilla(eq[0],'#F3EDE2',30,true)}<small>Agudos</small></div>
+      <div class="k">${perilla(eq[1],INK.naranja,30,true)}<small>Medios</small></div>
+      <div class="k">${perilla(eq[2],INK.amarillo,30,true)}<small>Graves</small></div>
+      <div class="k">${perilla(filtro,INK.turquesa,30,true)}<small>Filtro</small></div>
+    </div>
+    <div class="fader-c">
+      <button class="audif${cueOn?' on':''}" aria-label="Pre-escucha en audífonos"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12V8a6 6 0 0 1 12 0v4"/><rect x="1.5" y="10" width="3.5" height="5"/><rect x="11" y="10" width="3.5" height="5"/></svg></button>
+      <div class="fader-v"><div class="riel" style="flex:none;height:100%"><i style="top:calc(${fader}% - 8px)"></i></div><div class="medidor">${med(nivel)}</div></div>
+    </div>`;
+}
+document.getElementById('canalA').innerHTML = canal([.5,.5,.5], .5, false, 18, 12);
+document.getElementById('canalB').innerHTML = canal([.62,.5,.08], .38, true, 30, 10);
+document.getElementById('maestro').innerHTML = `
+  <div class="k">${perilla(.72,'#F3EDE2',38)}<small>Master</small></div>
+  <div class="k">${perilla(.6,'#F3EDE2',38)}<small>Audífonos</small></div>
+  <div class="k">${perilla(.3,'#F3EDE2',38,true)}<small>Mezcla en audífonos</small></div>`;
+
+/* ---------- biblioteca ---------- */
+const filas = [
+  ['Madrugada en la azotea','naranja','Tech house','126','8A','La menor',4,'4:51',true,'En A'],
+  ['Túnel 03','amarillo','Techno','132','8A','La menor',5,'6:10',true,'En B'],
+  ['Azotea, versión club','naranja','Tech house','125','9A','Mi menor',4,'5:40',true,'combina'],
+  ['Metro 3 a. m.','amarillo','Techno','128','8B','Do mayor',4,'5:05',true,'combina'],
+  ['Perreo en la lluvia','rosa','Reggaetón','95','5A','Do menor',3,'3:12',true,''],
+];
+document.getElementById('filas').innerHTML = filas.map(([t,c,e,b,k,kn,en,d,st,est]) => `
+  <tr class="${est.startsWith('En')?'en':''}">
+    <td><span class="nombre"><i style="background:${INK[c]}"></i>${t}</span></td>
+    <td>${e}</td><td class="num">${b}</td>
+    <td><span class="tono"><b>${k}</b><span style="color:var(--tinta-3)">${kn}</span></span></td>
+    <td><span class="energia">${[1,2,3,4,5].map(i => `<i class="${i<=en?'on':''}"></i>`).join('')}</span></td>
+    <td class="num">${d}</td>
+    <td style="color:var(--tinta-2)">4 stems</td>
+    <td style="text-align:right">${est==='combina'?'<span class="pill combina">Combina con A</span>':est?`<span class="pill en">${est}</span>`:''}</td>
+  </tr>`).join('');
+</script>
+</body>
+</html>

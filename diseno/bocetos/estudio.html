@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>HOUSE · Estudio (Patrón)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&family=Big+Shoulders:opsz,wght@10..72,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chasis:#2A2724; --chasis-alto:#35312D; --pantalla:#181614; --surco:#12100F; --bisel:#3F3A35;
+  --tinta:#F3EDE2; --tinta-2:#B9B0A3; --tinta-3:#9A9185; --negro:#161412;
+  --naranja:#FF6B1A; --amarillo:#FFCB1F; --azul:#6F8BFF; --rosa:#F0168A; --verde:#7ED957; --turquesa:#19C2C2;
+  --papel:#F3EDE2; --papel-2:#E2D9C9;
+  --display:'Big Shoulders','Arial Narrow',sans-serif;
+  --ui:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#1E1C1A}
+body{font-family:var(--ui);color:var(--tinta);font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.app{width:1440px;height:900px;background:var(--chasis);display:grid;grid-template-rows:60px 1fr;overflow:hidden;position:relative}
+
+/* ---------- surcos (uniones entre placas) ---------- */
+.surco-b{position:relative}
+.surco-b::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+.surco-r{position:relative}
+.surco-r::after{content:"";position:absolute;top:0;bottom:0;right:-3px;width:3px;background:linear-gradient(90deg,var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+
+/* ---------- barra superior ---------- */
+.top{display:flex;align-items:center;gap:14px;padding:0 16px 0 18px}
+.logo{font-family:var(--display);font-weight:900;font-size:30px;letter-spacing:.01em;line-height:1;margin-right:6px}
+.proyecto{display:flex;flex-direction:column;justify-content:center;padding:0 10px;height:44px;border-radius:6px;min-width:190px}
+.proyecto:hover{background:var(--chasis-alto)}
+.proyecto b{font-weight:700;font-size:14px}
+.proyecto span{color:var(--tinta-3);font-size:12px}
+.sep{width:1px;height:32px;background:var(--bisel)}
+.transporte{display:flex;gap:6px}
+.btn{height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border-radius:6px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 0 rgba(0,0,0,.45);font-weight:600;font-size:13px}
+.btn.icon{padding:0;width:40px}
+.btn.on{background:var(--tinta);color:var(--negro)}
+.btn.rec svg circle{fill:var(--rosa)}
+.lcd{background:var(--pantalla);border-radius:6px;height:44px;display:flex;align-items:center;gap:10px;padding:0 12px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.lcd .n{font-variant-numeric:tabular-nums;font-weight:600;font-size:20px;letter-spacing:.02em}
+.lcd small{display:block;font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3);letter-spacing:.02em;line-height:1}
+.bpm{font-family:var(--display);font-weight:900;font-size:34px;line-height:1;display:flex}
+.bpm i{font-style:normal;display:inline-block;width:.56em;text-align:center}
+.campo{display:flex;flex-direction:column;justify-content:center;height:44px;padding:0 10px;border-radius:6px}
+.campo:hover{background:var(--chasis-alto)}
+.campo small{font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3);line-height:1.1}
+.campo b{font-weight:700;font-size:14px}
+.espacio{flex:1}
+.seg{display:flex;background:var(--pantalla);border-radius:6px;padding:3px;gap:2px}
+.seg button{height:30px;padding:0 12px;border-radius:4px;font-weight:600;color:var(--tinta-2)}
+.seg button.on{background:var(--chasis-alto);color:var(--tinta);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.salidas{display:flex;align-items:center;gap:10px;height:36px;padding:0 12px;border-radius:6px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.salidas span{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+.salidas svg{flex:none}
+.bocina{display:flex;align-items:center;gap:8px}
+.bocina .cono{width:46px;height:46px}
+.vu{display:flex;flex-direction:column;gap:3px}
+.vu .fila{display:flex;gap:1px}
+.vu .fila i{width:3px;height:9px;background:#3a3531;display:block}
+.vu .fila i.v{background:var(--verde)} .vu .fila i.a{background:var(--amarillo)}
+
+/* ---------- cuerpo ---------- */
+.cuerpo{display:grid;grid-template-columns:272px 1fr;min-height:0}
+
+/* ---------- panel Sonidos ---------- */
+.sonidos{display:flex;flex-direction:column;padding:14px 14px 0 16px;min-height:0;gap:12px}
+.sonidos h2{margin:0;font-family:var(--display);font-weight:800;font-size:24px;line-height:1}
+.buscar{height:34px;border-radius:6px;background:var(--pantalla);display:flex;align-items:center;gap:8px;padding:0 10px;color:var(--tinta-3);box-shadow:inset 0 1px 2px rgba(0,0,0,.5)}
+.buscar kbd{margin-left:auto;font:inherit;font-size:11px;color:var(--tinta-3)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{height:26px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;background:var(--chasis-alto);font-size:12px;font-weight:600;color:var(--tinta-2)}
+.chip.on{background:var(--tinta);color:var(--negro)}
+.chip .dot{width:8px;height:8px;border-radius:2px}
+.estilo{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--tinta-2)}
+.estilo b{color:var(--tinta);font-weight:700}
+.lista{display:flex;flex-direction:column;gap:2px;overflow:hidden;margin:0 -8px}
+.item{display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:6px 8px;border-radius:6px}
+.item:hover,.item.sel{background:var(--chasis-alto)}
+.item.sel{box-shadow:inset 0 0 0 2px var(--tinta)}
+.item .nom{font-weight:600;font-size:13px;line-height:1.2}
+.item .desc{font-size:11px;color:var(--tinta-3)}
+.item .onda{display:flex;align-items:center;gap:1px;height:18px}
+.item .onda i{display:block;width:2px;border-radius:1px}
+.pie{margin-top:auto;padding:12px 0 14px;font-size:12px;color:var(--tinta-3);border-top:1px solid var(--bisel)}
+
+/* ---------- espacio de trabajo ---------- */
+.trabajo{display:grid;grid-template-rows:44px 104px 30px 1fr 286px;min-width:0;min-height:0}
+.pestanas{display:flex;align-items:flex-end;gap:2px;padding:0 16px}
+.pestanas > button{height:36px;padding:0 16px;border-radius:6px 6px 0 0;font-family:var(--display);font-weight:800;font-size:19px;color:var(--tinta-3);display:inline-flex;align-items:center;gap:8px}
+.pestanas > button small{font-family:var(--ui);font-weight:500;font-size:11px;color:var(--tinta-3)}
+.pestanas > button.on{background:var(--pantalla);color:var(--tinta)}
+.pestanas .derecha{margin-left:auto;align-self:center;display:flex;gap:8px;align-items:center}
+.tm{height:28px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:999px;background:var(--tinta);color:var(--negro);font-weight:700;font-size:12px}
+.tm i{width:7px;height:7px;border-radius:50%;background:var(--negro)}
+.btn-vis{height:30px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:6px;background:var(--chasis-alto);font-weight:600;box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.btn-vis kbd{font:inherit;font-size:11px;color:var(--tinta-3)}
+
+/* marquesina */
+.marquesina{background:var(--pantalla);padding:10px 16px 12px;display:flex;flex-direction:column;gap:6px}
+.regla{position:relative;height:12px;font-size:11px;color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.regla span{position:absolute;top:-2px;transform:translateX(-1px)}
+.letrero{position:relative;height:68px;background:var(--papel);border-radius:4px;display:flex;overflow:hidden;color:var(--negro)}
+.focos{position:absolute;left:0;right:0;top:5px;height:6px;display:flex;justify-content:space-between;padding:0 6px;pointer-events:none}
+.focos i{width:6px;height:6px;border-radius:50%;background:#CFC5B5}
+.focos i.on{background:var(--amarillo);box-shadow:0 0 0 1.5px var(--negro)}
+.sec{position:relative;display:flex;flex-direction:column;justify-content:flex-end;padding:0 10px 7px;border-right:2px solid var(--negro)}
+.sec:last-child{border-right:0}
+.sec b{font-family:var(--display);font-weight:900;font-size:26px;line-height:.9;letter-spacing:.005em;position:relative;z-index:1}
+.sec small{font-size:11px;font-weight:600;color:#5A524A;position:relative;z-index:1}
+.sec.drop b{font-size:36px}
+.sec.actual{background:var(--amarillo)}
+.sec.actual small{color:var(--negro)}
+.energia{position:absolute;inset:14px 0 0 0;pointer-events:none}
+.cabezal{position:absolute;top:0;bottom:0;width:2px;background:var(--rosa);z-index:3}
+.cabezal::before{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top:6px solid var(--rosa)}
+
+/* cabecera de pasos */
+.cabecera{display:grid;grid-template-columns:196px 1fr 132px;gap:12px;align-items:center;padding:0 16px;background:var(--pantalla)}
+.cabecera .izq{display:flex;gap:6px;align-items:center}
+.var{height:24px;min-width:24px;padding:0 7px;border-radius:4px;background:var(--chasis-alto);font-family:var(--display);font-weight:800;font-size:14px;color:var(--tinta-2);display:inline-flex;align-items:center;justify-content:center}
+.var.on{background:var(--tinta);color:var(--negro)}
+.tiempos{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.tiempos div{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:11px;color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.tiempos div span:first-child{color:var(--tinta);font-family:var(--display);font-weight:800;font-size:13px}
+.cabecera .der{display:flex;justify-content:flex-end;gap:6px}
+.mini{white-space:nowrap;height:24px;padding:0 9px;border-radius:4px;background:var(--chasis-alto);font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+
+/* pistas */
+.pistas{background:var(--pantalla);padding:2px 16px 8px;display:flex;flex-direction:column;gap:4px;min-height:0;overflow:hidden}
+.pista{display:grid;grid-template-columns:196px 1fr 132px;gap:12px;align-items:center;height:38px}
+.pista .nombre{display:flex;align-items:center;gap:10px;height:38px;padding:0 8px 0 5px;border-radius:6px;background:var(--chasis)}
+.pista.sel .nombre{box-shadow:inset 0 0 0 2px var(--tinta)}
+.pista .nombre b{font-weight:700;font-size:13px}
+.pista .nombre small{display:block;font-size:11px;color:var(--tinta-3);font-weight:500;margin-top:-1px}
+.pasos{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;height:30px}
+.grupo{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.paso{border-radius:3px;background:#3B3631;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.grupo.b .paso{background:#2F2B27}
+.paso.on{box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.paso.ahora{outline:2px solid var(--tinta);outline-offset:1px}
+.rollo{position:relative;height:30px;border-radius:3px;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 1px),#2E2A26 calc(25% - 1px) 25%),repeating-linear-gradient(0deg,#1F1C1A 0 5px,#221F1C 5px 10px)}
+.rollo i{position:absolute;height:6px;border-radius:2px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.controles{display:flex;align-items:center;gap:6px;justify-content:flex-end}
+.ms{width:26px;height:24px;border-radius:4px;background:var(--chasis-alto);font-family:var(--display);font-weight:800;font-size:13px;color:var(--tinta-2);display:inline-flex;align-items:center;justify-content:center}
+.ms.on{background:var(--tinta);color:var(--negro)}
+.fader-h{width:62px;height:4px;border-radius:2px;background:#3a3531;position:relative;margin-left:4px}
+.fader-h i{position:absolute;top:-6px;width:12px;height:16px;border-radius:2px;background:var(--tinta-2);box-shadow:inset 0 -2px 0 rgba(0,0,0,.25)}
+.fader-h b{position:absolute;left:0;top:0;height:4px;border-radius:2px}
+
+/* panel inferior */
+.inferior{display:grid;grid-template-columns:1fr 446px;min-height:0}
+.instrumento{padding:12px 16px 14px;display:grid;grid-template-rows:auto 1fr;gap:10px;min-width:0}
+.cab-inst{display:flex;align-items:center;gap:12px}
+.cab-inst h3{margin:0;font-family:var(--display);font-weight:900;font-size:28px;line-height:1}
+.preset{display:flex;align-items:center;gap:6px;height:32px;padding:0 6px;border-radius:6px;background:var(--pantalla)}
+.preset span{font-weight:600;padding:0 6px}
+.preset button{width:22px;height:22px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:var(--tinta-2)}
+.cuerpo-inst{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:stretch;min-height:0}
+.perillas{display:flex;gap:14px;align-items:flex-start;padding-top:4px}
+.perilla{display:flex;flex-direction:column;align-items:center;gap:4px;width:96px}
+.perilla label{font-family:var(--display);font-weight:700;font-size:15px;color:var(--tinta)}
+.perilla small{font-size:11px;color:var(--tinta-3);margin-top:-4px}
+.perilla output{font-variant-numeric:tabular-nums;font-weight:600;font-size:12px;color:var(--tinta-2)}
+.col-perillas{display:flex;flex-direction:column;gap:10px;justify-content:space-between;min-height:0}
+.visor{flex:1;background:var(--pantalla);border-radius:6px;position:relative;overflow:hidden;min-height:0}
+.visor .et{position:absolute;left:10px;top:8px;font-family:var(--display);font-weight:700;font-size:12px;color:var(--tinta-3)}
+.bombeo{display:flex;align-items:center;gap:10px;height:40px;padding:0 10px;border-radius:6px;background:var(--pantalla)}
+.bombeo b{font-weight:700}
+.bombeo small{color:var(--tinta-3);font-size:11px;display:block}
+.switch{flex:none;margin-left:auto;width:38px;height:22px;border-radius:999px;background:var(--amarillo);position:relative}
+.switch::after{content:"";position:absolute;right:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--negro)}
+
+.pads{padding:12px 16px 14px 18px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.cab-pads{display:flex;align-items:center;gap:8px}
+.cab-pads h3{margin:0;font-family:var(--display);font-weight:900;font-size:22px;line-height:1;margin-right:auto}
+.rejilla{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:8px;flex:1;min-height:0}
+.pad{position:relative;text-align:left;align-items:flex-start;border-radius:10px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 2px 0 rgba(0,0,0,.45);padding:7px 9px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.pad::before{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--c)}
+.pad .snd{font-size:11px;font-weight:600;color:var(--tinta-2);line-height:1.1;margin-top:2px}
+.pad .tecla{font-family:var(--display);font-weight:900;font-size:22px;line-height:1}
+.pad.golpe{background:var(--c);transform:scale(.97);box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+.pad.golpe .snd,.pad.golpe .tecla{color:var(--negro)}
+
+@media (prefers-reduced-motion: no-preference){
+  .cono .membrana{animation:late .476s cubic-bezier(.2,.8,.2,1) infinite;transform-origin:23px 23px}
+  @keyframes late{0%{transform:scale(1.07)}35%{transform:scale(.97)}100%{transform:scale(1)}}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== BARRA SUPERIOR ===== -->
+  <header class="top surco-b">
+    <div class="logo">HOUSE</div>
+    <button class="proyecto" aria-label="Proyecto: Madrugada en la azotea">
+      <b>Madrugada en la azotea</b>
+      <span>Tech house, guardado hace 12 s</span>
+    </button>
+    <div class="sep"></div>
+    <div class="transporte">
+      <button class="btn icon" aria-label="Parar"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" fill="currentColor"/></svg></button>
+      <button class="btn icon on" aria-label="Reproducir"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 1.5 L14 8 L3 14.5 Z" fill="currentColor"/></svg></button>
+      <button class="btn icon rec" aria-label="Grabar"><svg width="16" height="16" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/></svg></button>
+    </div>
+    <div class="lcd" aria-label="Posición">
+      <div><small>Compás</small><span class="n">33</span></div>
+      <div><small>Tiempo</small><span class="n">2</span></div>
+      <div><small>Paso</small><span class="n">3</span></div>
+    </div>
+    <div class="lcd" aria-label="Tempo 126 BPM">
+      <div class="bpm"><i>1</i><i>2</i><i>6</i></div>
+      <small>BPM</small>
+    </div>
+    <button class="campo"><small>Tonalidad</small><b>La menor</b></button>
+    <button class="campo"><small>Swing</small><b>56%</b></button>
+    <button class="btn icon" aria-label="Metrónomo"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="miter"><path d="M6 2h6l3 14H3z"/><path d="M9 12 13 5"/></svg></button>
+    <div class="espacio"></div>
+    <div class="seg" role="group" aria-label="Modo">
+      <button class="on">Fácil</button><button>Pro</button>
+    </div>
+    <button class="salidas" aria-label="Salidas de audio">
+      <span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="1" width="10" height="14"/><circle cx="8" cy="10" r="2.5"/><path d="M8 4.5v.5"/></svg>Bocina</span>
+      <span style="color:var(--tinta-3)">+</span>
+      <span><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12V8a6 6 0 0 1 12 0v4"/><rect x="1.5" y="10" width="3.5" height="5"/><rect x="11" y="10" width="3.5" height="5"/></svg>Audífonos</span>
+    </button>
+    <div class="bocina" aria-label="Nivel maestro">
+      <svg class="cono" viewBox="0 0 46 46">
+        <circle cx="23" cy="23" r="22" fill="#1D1B19"/>
+        <circle cx="23" cy="23" r="19.5" fill="none" stroke="#403A34" stroke-width="3"/>
+        <g class="membrana">
+          <circle cx="23" cy="23" r="16" fill="#26231F"/>
+          <circle cx="23" cy="23" r="12.5" fill="none" stroke="#302C28" stroke-width="1.5"/>
+          <circle cx="23" cy="23" r="9" fill="none" stroke="#302C28" stroke-width="1.5"/>
+          <circle cx="23" cy="23" r="5.5" fill="var(--tinta-3)"/>
+        </g>
+      </svg>
+      <div class="vu" aria-hidden="true">
+        <div class="fila" id="vuL"></div>
+        <div class="fila" id="vuR"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="cuerpo">
+    <!-- ===== SONIDOS ===== -->
+    <aside class="sonidos surco-r">
+      <h2>Sonidos</h2>
+      <div class="buscar"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="4.5"/><path d="m9.5 9.5 3.5 3.5"/></svg>Buscar sonidos<kbd>Ctrl+F</kbd></div>
+      <div class="chips" id="chips"></div>
+      <div class="estilo"><span>Estilo: <b>Tech house</b></span><span>126 BPM, La menor</span></div>
+      <div class="lista" id="lista"></div>
+      <div class="pie">Arrastra un sonido a una pista o a una tecla.</div>
+    </aside>
+
+    <!-- ===== ESPACIO DE TRABAJO ===== -->
+    <main class="trabajo">
+      <nav class="pestanas" aria-label="Espacios">
+        <button class="on">Patrón <small>F1</small></button>
+        <button>Canción <small>F2</small></button>
+        <button>Mezcla <small>F3</small></button>
+        <button>Voz <small>F4</small></button>
+        <button>DJ <small>F5</small></button>
+        <div class="derecha">
+          <span class="tm"><i></i>Teclado musical en Pads. Tab para salir</span>
+          <button class="btn-vis"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="16" height="11"/><path d="M6 15h6M9 12v3"/><circle cx="9" cy="6.5" r="2.2"/></svg>Visuales<kbd>F6</kbd></button>
+        </div>
+      </nav>
+
+      <section class="marquesina" aria-label="Secciones de la canción">
+        <div class="regla" id="regla"></div>
+        <div class="letrero" id="letrero">
+          <div class="focos" id="focos"></div>
+        </div>
+      </section>
+
+      <div class="cabecera">
+        <div class="izq">
+          <span class="var on">A</span><span class="var">B</span><span class="var">C</span><span class="var">+</span>
+        </div>
+        <div class="tiempos" id="tiempos"></div>
+        <div class="der">
+          <button class="mini"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="12" height="12"/><circle cx="4.5" cy="4.5" r=".8" fill="currentColor"/><circle cx="9.5" cy="9.5" r=".8" fill="currentColor"/><circle cx="9.5" cy="4.5" r=".8" fill="currentColor"/><circle cx="4.5" cy="9.5" r=".8" fill="currentColor"/></svg>Dados</button>
+          <button class="mini">16 pasos</button>
+        </div>
+      </div>
+
+      <section class="pistas" id="pistas" aria-label="Pistas del patrón"></section>
+
+      <section class="inferior">
+        <div class="instrumento surco-r">
+          <div class="cab-inst">
+            <span id="pict-inst"></span>
+            <h3>Ácido</h3>
+            <div class="preset">
+              <button aria-label="Preset anterior"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M7 1 2 5l5 4" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+              <span>Rodante de madrugada</span>
+              <button aria-label="Preset siguiente"><svg width="10" height="10" viewBox="0 0 10 10"><path d="M3 1l5 4-5 4" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+            </div>
+            <button class="mini" style="height:32px">Dados</button>
+            <div class="espacio"></div>
+            <div class="seg"><button class="on">Cara fácil</button><button>Cara pro</button></div>
+          </div>
+          <div class="cuerpo-inst">
+            <div class="col-perillas">
+              <div class="perillas" id="perillas"></div>
+              <div class="bombeo">
+                <svg width="46" height="22" viewBox="0 0 46 22" aria-hidden="true"><path d="M1 20 L1 4 Q4 20 11 20 L12 4 Q15 20 22 20 L23 4 Q26 20 33 20 L34 4 Q37 20 44 20" fill="none" stroke="var(--amarillo)" stroke-width="2"/></svg>
+                <div><b>Bombeo con el bombo</b><small>El bajo se aparta cada vez que pega el bombo</small></div>
+                <button class="switch" role="switch" aria-checked="true" aria-label="Bombeo con el bombo"></button>
+              </div>
+            </div>
+            <div class="visor" aria-label="Forma del filtro">
+              <span class="et">Filtro</span>
+              <svg width="100%" height="100%" viewBox="0 0 300 120" preserveAspectRatio="none">
+                <path d="M0 30 H150 C185 30 196 8 210 8 C226 8 232 70 262 118 L300 120" fill="none" stroke="var(--amarillo)" stroke-width="3" vector-effect="non-scaling-stroke"/>
+                <path d="M0 30 H150 C185 30 196 8 210 8 C226 8 232 70 262 118 L300 120 L0 120Z" fill="var(--amarillo)" opacity=".12"/>
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div class="pads">
+          <div class="cab-pads">
+            <h3>Pads</h3>
+            <div class="seg"><button class="on">Pads</button><button>Piano</button><button>Escala</button><button>Acordes</button></div>
+          </div>
+          <div class="rejilla" id="rejilla"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+/* ---------- pictogramas (figuras sólidas en negro sobre la tinta) ---------- */
+const INK = {naranja:'#FF6B1A', amarillo:'#FFCB1F', azul:'#6F8BFF', rosa:'#F0168A', verde:'#7ED957', turquesa:'#19C2C2'};
+const PICT = {
+  bombo:  '<circle cx="14" cy="14" r="7.5" fill="none" stroke="#161412" stroke-width="3"/><circle cx="14" cy="14" r="2.5" fill="#161412"/>',
+  palmas: '<rect x="7" y="6" width="6" height="15" rx="3" transform="rotate(-18 10 13)" fill="#161412"/><rect x="15" y="6" width="6" height="15" rx="3" transform="rotate(18 18 13)" fill="#161412"/>',
+  hat:    '<ellipse cx="14" cy="10" rx="9" ry="2.6" fill="#161412"/><ellipse cx="14" cy="15" rx="9" ry="2.6" fill="#161412"/><rect x="13" y="15" width="2" height="8" fill="#161412"/>',
+  hatab:  '<ellipse cx="14" cy="8" rx="9" ry="2.6" fill="#161412"/><ellipse cx="14" cy="16" rx="9" ry="2.6" fill="#161412"/><rect x="13" y="16" width="2" height="7" fill="#161412"/>',
+  shaker: '<rect x="6" y="9" width="16" height="10" rx="5" fill="#161412"/><circle cx="11" cy="14" r="1.4" fill="#FF6B1A"/><circle cx="14.5" cy="14" r="1.4" fill="#FF6B1A"/><circle cx="18" cy="14" r="1.4" fill="#FF6B1A"/>',
+  conga:  '<path d="M8 6h12l-2.5 16h-7z" fill="#161412"/><rect x="7" y="5" width="14" height="3" fill="#161412"/>',
+  bajo:   '<path d="M4 14c2.5-7 5.5-7 8 0s5.5 7 8 0 3-4 4-4" fill="none" stroke="#161412" stroke-width="3.2" stroke-linecap="square"/>',
+  acordes:'<rect x="6" y="6" width="16" height="4" fill="#161412"/><rect x="6" y="12" width="16" height="4" fill="#161412"/><rect x="6" y="18" width="16" height="4" fill="#161412"/>',
+  voz:    '<rect x="10" y="4" width="8" height="13" rx="4" fill="#161412"/><path d="M7 13a7 7 0 0 0 14 0" fill="none" stroke="#161412" stroke-width="2.2"/><rect x="13" y="20" width="2" height="4" fill="#161412"/>',
+  sample: '<rect x="5" y="12" width="2" height="4" fill="#161412"/><rect x="9" y="8" width="2" height="12" fill="#161412"/><rect x="13" y="5" width="2" height="18" fill="#161412"/><rect x="17" y="9" width="2" height="10" fill="#161412"/><rect x="21" y="12" width="2" height="4" fill="#161412"/>',
+  subida: '<path d="M5 21 L23 7 L23 21 Z" fill="#161412"/>',
+  efecto: '<path d="M14 14m-2 0a2 2 0 1 1 4 0a4 4 0 1 1-8 0a6 6 0 1 1 12 0a8 8 0 0 1-8 8" fill="none" stroke="#161412" stroke-width="2.4"/>'
+};
+const pict = (k, ink, s = 28) => `<svg width="${s}" height="${s}" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="${INK[ink]}"/>${PICT[k]}</svg>`;
+
+/* ---------- vúmetro ---------- */
+const vu = (n) => Array.from({length:14}, (_, i) => `<i class="${i < n ? (i > 10 ? 'a' : 'v') : ''}"></i>`).join('');
+document.getElementById('vuL').innerHTML = vu(11);
+document.getElementById('vuR').innerHTML = vu(10);
+
+/* ---------- chips y lista de sonidos ---------- */
+const chips = [['Batería','naranja'],['Bajos','amarillo'],['Sintes','azul'],['Voces','rosa'],['Samples','verde'],['Efectos','turquesa']];
+document.getElementById('chips').innerHTML = chips.map(([t,c,on]) => `<span class="chip${on?' on':''}">${c?`<span class="dot" style="background:${INK[c]}"></span>`:''}${t}</span>`).join('');
+const sonidos = [
+  ['bombo','naranja','Bombo con cuerpo','Kit Madrugada', 'A'],
+  ['palmas','naranja','Palmas secas','Kit Madrugada', ''],
+  ['hat','naranja','Hat cerrado de cobre','Kit Madrugada', ''],
+  ['shaker','naranja','Shaker de semillas','Percusión latina', ''],
+  ['conga','naranja','Conga alta','Percusión latina', ''],
+  ['bajo','amarillo','Bajo ácido rodante','Ácido', ''],
+  ['acordes','azul','Stab de órgano','Analógico', ''],
+  ['voz','rosa','Voz “dale”','Vocal chops', ''],
+  ['sample','verde','Metro llegando','Suena tu ciudad', ''],
+  ['subida','turquesa','Subida de 16 compases','Efectos de transición', ''],
+];
+const onda = (seed, ink) => Array.from({length:22}, (_, i) => { const h = 3 + Math.round(Math.abs(Math.sin(i*1.7+seed)*Math.cos(i*.45+seed*2))*14); return `<i style="height:${h}px;background:${INK[ink]};opacity:${i%2?'.9':'.6'}"></i>`; }).join('');
+document.getElementById('lista').innerHTML = sonidos.map(([p,ink,n,d],i) => `<div class="item${i===5?' sel':''}">${pict(p,ink)}<div><div class="nom">${n}</div><div class="desc">${d}</div></div><div class="onda">${onda(i+1,ink)}</div></div>`).join('');
+
+/* ---------- marquesina ---------- */
+const secciones = [['Intro',16],['Subida',8],['¡Drop!',16,'drop'],['Pausa',8],['¡Drop!',16,'drop actual'],['Salida',8]];
+const total = secciones.reduce((a,s) => a + s[1], 0); // 72 compases
+const actual = 33.4; // compás del cabezal
+const letrero = document.getElementById('letrero');
+let acum = 0;
+secciones.forEach(([n,c,cls]) => {
+  const d = document.createElement('div');
+  d.className = 'sec ' + (cls||'');
+  d.style.width = (c/total*100) + '%';
+  d.innerHTML = `<b>${n}</b><small>${c} compases</small>`;
+  letrero.appendChild(d); acum += c;
+});
+// ¿qué sección suena? la 5ª (compás 49–64) en este boceto: marcar
+const secs = letrero.querySelectorAll('.sec');
+secs.forEach(s => s.classList.remove('actual'));
+secs[2].classList.add('actual');
+// curva de energía
+const energia = [.18,.22,.25,.3,.34,.38,.45,.56,.68,.8,.92,.96,.97,.95,.96,.94,.62,.5,.45,.52,.66,.8,.95,1,.99,1,.98,.97,.7,.5,.34,.2];
+const pts = energia.map((e,i) => `${(i/(energia.length-1)*1000).toFixed(1)},${(54 - e*40).toFixed(1)}`).join(' ');
+letrero.insertAdjacentHTML('beforeend', `<svg class="energia" viewBox="0 0 1000 54" preserveAspectRatio="none" aria-hidden="true"><polygon points="0,54 ${pts} 1000,54" fill="#161412" opacity=".06"/><polyline points="${pts}" fill="none" stroke="#161412" stroke-width="1.5" vector-effect="non-scaling-stroke" opacity=".22"/></svg>`);
+letrero.insertAdjacentHTML('beforeend', `<div class="cabezal" style="left:${((actual-1)/total*100).toFixed(2)}%"></div>`);
+// focos: los de la sección actual encendidos
+const focos = document.getElementById('focos');
+const nf = 96, ini = 24/total, fin = 40/total;
+focos.innerHTML = Array.from({length:nf}, (_, i) => { const p = i/(nf-1); return `<i class="${p>=ini && p<=fin ? 'on':''}"></i>`; }).join('');
+// regla
+document.getElementById('regla').innerHTML = [1,9,17,25,33,41,49,57,65].map(c => `<span style="left:${((c-1)/total*100).toFixed(2)}%">${c}</span>`).join('');
+
+/* ---------- cabecera de tiempos ---------- */
+document.getElementById('tiempos').innerHTML = [1,2,3,4].map(t => `<div><span>${t}</span><span>·</span><span>·</span><span>·</span></div>`).join('');
+
+/* ---------- pistas ---------- */
+const X = 1, _ = 0;
+const pistas = [
+  {n:'Bombo', d:'Bombo con cuerpo', p:'bombo', c:'naranja', s:[X,_,_,_, X,_,_,_, X,_,_,_, X,_,_,_]},
+  {n:'Palmas', d:'Palmas secas', p:'palmas', c:'naranja', s:[_,_,_,_, X,_,_,_, _,_,_,_, X,_,_,X]},
+  {n:'Hat cerrado', d:'Hat de cobre', p:'hat', c:'naranja', s:[_,X,_,X, _,X,_,X, _,X,_,X, _,X,X,X]},
+  {n:'Hat abierto', d:'Hat abierto', p:'hatab', c:'naranja', s:[_,_,X,_, _,_,X,_, _,_,X,_, _,_,X,_]},
+  {n:'Shaker', d:'Semillas, con swing', p:'shaker', c:'naranja', s:[X,X,X,X, X,X,X,X, X,X,X,X, X,X,X,X], vel:[1,.5,.8,.5,1,.5,.8,.5,1,.5,.8,.5,1,.5,.8,.6]},
+  {n:'Conga', d:'Conga alta', p:'conga', c:'naranja', s:[_,_,_,X, _,_,X,_, _,X,_,_, _,_,X,_]},
+  {n:'Bajo', d:'Ácido', p:'bajo', c:'amarillo', roll:[[2,1,3],[3,1,3],[6,1,1],[7,1,3],[10,1,4],[11,1,3],[14,2,2]], sel:true},
+  {n:'Acordes', d:'Stab de órgano', p:'acordes', c:'azul', roll:[[3,1,1],[3,1,2],[3,1,3],[10,1,0],[10,1,1],[10,1,2]]},
+  {n:'Voz “dale”', d:'Vocal chop', p:'voz', c:'rosa', s:[_,_,_,_, _,_,_,_, _,_,X,_, _,_,_,_]},
+];
+const ahora = 6; // índice del paso que suena (0–15)
+document.getElementById('pistas').innerHTML = pistas.map((t, ti) => {
+  let area;
+  if (t.roll) {
+    area = `<div class="rollo">${t.roll.map(([ini,len,alt]) => `<i style="left:calc(${ini/16*100}% + 2px);width:calc(${len/16*100}% - 4px);bottom:${3+alt*6}px;background:${INK[t.c]}"></i>`).join('')}<i style="left:${ahora/16*100}%;width:2px;height:30px;bottom:0;border-radius:0;background:var(--tinta);box-shadow:none"></i></div>`;
+  } else {
+    area = `<div class="pasos">${[0,1,2,3].map(g => `<div class="grupo ${g%2?'b':''}">${[0,1,2,3].map(k => { const i=g*4+k; const on=t.s[i]; const v=t.vel?t.vel[i]:1; return `<div class="paso${on?' on':''}${i===ahora?' ahora':''}" style="${on?`background:${INK[t.c]};opacity:${.55+v*.45}`:''}"></div>`; }).join('')}</div>`).join('')}</div>`;
+  }
+  const vol = [80,64,52,46,40,50,72,58,48][ti];
+  return `<div class="pista${t.sel?' sel':''}">
+    <div class="nombre">${pict(t.p,t.c)}<div><b>${t.n}</b><small>${t.d}</small></div></div>
+    ${area}
+    <div class="controles"><span class="ms${ti===8?' on':''}" title="Silenciar">M</span><span class="ms" title="Solo">S</span><div class="fader-h"><b style="width:${vol}%;background:${INK[t.c]}"></b><i style="left:calc(${vol}% - 6px)"></i></div></div>
+  </div>`;
+}).join('');
+
+/* ---------- perillas ---------- */
+function perilla(nombre, pro, valor, texto, ink) {
+  const r = 30, cx = 40, cy = 40, a0 = 135, a1 = 405;
+  const pol = (a) => { const t = a*Math.PI/180; return [cx + r*Math.cos(t), cy + r*Math.sin(t)]; };
+  const arco = (from, to) => { const [x0,y0] = pol(from), [x1,y1] = pol(to); const big = (to-from) > 180 ? 1 : 0; return `M${x0.toFixed(2)} ${y0.toFixed(2)} A${r} ${r} 0 ${big} 1 ${x1.toFixed(2)} ${y1.toFixed(2)}`; };
+  const av = a0 + (a1-a0)*valor; const [px,py] = pol(av);
+  const [ix,iy] = [cx + (r-15)*Math.cos(av*Math.PI/180), cy + (r-15)*Math.sin(av*Math.PI/180)];
+  return `<div class="perilla"><svg width="80" height="80" viewBox="0 0 80 80" role="slider" aria-label="${nombre}" aria-valuetext="${texto}">
+    <path d="${arco(a0,a1)}" fill="none" stroke="#181614" stroke-width="5"/>
+    <path d="${arco(a0,av)}" fill="none" stroke="${INK[ink]}" stroke-width="5"/>
+    <circle cx="40" cy="40" r="22" fill="#35312D"/><circle cx="40" cy="40" r="22" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="1"/>
+    <line x1="${ix.toFixed(2)}" y1="${iy.toFixed(2)}" x2="${(cx+(r-8)*Math.cos(av*Math.PI/180)).toFixed(2)}" y2="${(cy+(r-8)*Math.sin(av*Math.PI/180)).toFixed(2)}" stroke="#F3EDE2" stroke-width="3"/>
+  </svg><label>${nombre}</label><small>${pro}</small><output>${texto}</output></div>`;
+}
+document.getElementById('perillas').innerHTML = [
+  ['Brillo','cutoff',.46,'46%'], ['Resonancia','resonance',.72,'72%'], ['Ácido','env mod',.64,'64%'], ['Pegada','accent',.38,'38%']
+].map(([n,p,v,t]) => perilla(n,p,v,t,'amarillo')).join('');
+document.getElementById('pict-inst').innerHTML = pict('bajo','amarillo',34);
+
+/* ---------- pads ---------- */
+const pads = [
+  ['1','Bombo','naranja'],['2','Palmas','naranja'],['3','Hat','naranja'],['4','Hat abierto','naranja'],
+  ['Q','Shaker','naranja'],['W','Conga','naranja'],['E','Rim','naranja'],['R','Cencerro','naranja'],
+  ['A','Voz “dale”','rosa'],['S','Voz “eh”','rosa'],['D','Stab','azul'],['F','Acorde menor','azul'],
+  ['Z','Subida','turquesa'],['X','Impacto','turquesa'],['C','Metro','verde'],['V','Silbato','verde'],
+];
+document.getElementById('rejilla').innerHTML = pads.map(([k,s,c]) => `<button class="pad${(k==='Q'||k==='D')?' golpe':''}" style="--c:${INK[c]}" aria-label="Pad ${s}, tecla ${k}"><span class="snd">${s}</span><span class="tecla">${k}</span></button>`).join('');
+</script>
+</body>
+</html>

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>HOUSE · Visuales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:ital,wght@0,200..800;1,200..800&family=Big+Shoulders:opsz,wght@10..72,100..900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --chasis:#2A2724; --chasis-alto:#35312D; --pantalla:#181614; --surco:#12100F; --bisel:#3F3A35;
+  --tinta:#F3EDE2; --tinta-2:#B9B0A3; --tinta-3:#9A9185; --negro:#161412;
+  --naranja:#FF6B1A; --amarillo:#FFCB1F; --azul:#6F8BFF; --rosa:#F0168A; --verde:#7ED957; --turquesa:#19C2C2;
+  --papel:#F3EDE2; --papel-2:#E2D9C9;
+  --display:'Big Shoulders','Arial Narrow',sans-serif;
+  --ui:'Atkinson Hyperlegible Next',system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#1E1C1A}
+body{font-family:var(--ui);color:var(--tinta);font-size:13px;line-height:1.35;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+.app{width:1440px;height:900px;background:var(--chasis);display:grid;grid-template-rows:60px 44px 1fr;overflow:hidden}
+.surco-b{position:relative}
+.surco-b::after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+.surco-r{position:relative}
+.surco-r::after{content:"";position:absolute;top:0;bottom:0;right:-3px;width:3px;background:linear-gradient(90deg,var(--surco) 0 2px,var(--bisel) 2px 3px);z-index:2}
+
+.top{display:flex;align-items:center;gap:14px;padding:0 16px 0 18px}
+.logo{font-family:var(--display);font-weight:900;font-size:30px;line-height:1;margin-right:6px}
+.proyecto b{display:block;font-weight:700;font-size:14px}
+.proyecto span{color:var(--tinta-3);font-size:12px}
+.sep{width:1px;height:32px;background:var(--bisel)}
+.btn{height:36px;min-width:36px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;border-radius:6px;background:var(--chasis-alto);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 1px 0 rgba(0,0,0,.45);font-weight:600}
+.btn.icon{padding:0;width:40px}
+.btn.on{background:var(--tinta);color:var(--negro)}
+.lcd{background:var(--pantalla);border-radius:6px;height:44px;display:flex;align-items:center;gap:12px;padding:0 12px;box-shadow:inset 0 1px 2px rgba(0,0,0,.6)}
+.lcd small{display:block;font-family:var(--display);font-weight:700;font-size:11px;color:var(--tinta-3);line-height:1}
+.lcd .n{font-variant-numeric:tabular-nums;font-weight:600;font-size:18px}
+.bpm{font-family:var(--display);font-weight:900;font-size:32px;line-height:1}
+.espacio{flex:1}
+
+.pestanas{display:flex;align-items:flex-end;gap:2px;padding:0 16px}
+.pestanas > button{height:36px;padding:0 16px;border-radius:6px 6px 0 0;font-family:var(--display);font-weight:800;font-size:19px;color:var(--tinta-3);display:inline-flex;align-items:center;gap:8px}
+.pestanas > button small{font-family:var(--ui);font-weight:500;font-size:11px;color:var(--tinta-3)}
+.pestanas > button.on{background:var(--pantalla);color:var(--tinta)}
+.pestanas .derecha{margin-left:auto;align-self:center;display:flex;gap:8px}
+.btn-vis{height:30px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:6px;background:var(--tinta);color:var(--negro);font-weight:700}
+.btn-vis kbd{font:inherit;font-size:11px;color:#5A524A}
+
+.cuerpo{display:grid;grid-template-columns:1fr 468px;min-height:0}
+.escenario{background:var(--pantalla);padding:14px 18px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.info{display:flex;align-items:center;gap:10px}
+.info b{font-family:var(--display);font-weight:900;font-size:22px;line-height:1;margin-right:4px}
+.info span{color:var(--tinta-2)}
+.estado{height:24px;padding:0 9px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:800}
+.estado.vivo{background:var(--rosa);color:var(--negro)}
+.estado.seguro{background:var(--verde);color:var(--negro)}
+.estado i{width:7px;height:7px;border-radius:50%;background:var(--negro)}
+.pantalla2{position:relative;border-radius:6px;overflow:hidden;background:#05030A;box-shadow:0 0 0 2px #0b0a09,0 0 0 3px var(--bisel);aspect-ratio:16/9;width:100%}
+.pantalla2 svg{position:absolute;inset:0;width:100%;height:100%}
+.pantalla2 .karaoke{position:absolute;left:0;right:0;bottom:7%;text-align:center;font-family:var(--display);font-weight:900;font-size:34px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.6)}
+.guia{display:flex;flex-direction:column;gap:6px}
+.senales{display:grid;grid-template-columns:1fr auto auto;gap:16px;align-items:center;background:#1F1C1A;border-radius:6px;padding:10px 14px}
+.senales .t{font-family:var(--display);font-weight:800;font-size:15px;margin-bottom:6px;display:block}
+.espectro{display:flex;align-items:flex-end;gap:2px;height:34px}
+.espectro i{flex:1;background:var(--tinta-2);border-radius:1px}
+.golpes{display:flex;gap:10px}
+.golpe{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--tinta-2);font-weight:600}
+.golpe i{width:22px;height:22px;border-radius:50%;background:#3a3531;display:block}
+.golpe.on i{background:var(--c)}
+.cuenta{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.cuenta small{font-size:12px;color:var(--tinta-3)}
+.cuenta b{font-family:var(--display);font-weight:900;font-size:30px;line-height:1;color:var(--amarillo)}
+.guia .t{display:flex;justify-content:space-between;align-items:baseline}
+.guia .t b{font-family:var(--display);font-weight:800;font-size:17px}
+.guia .t span{font-size:12px;color:var(--tinta-3)}
+.letrero{position:relative;height:56px;background:var(--papel);border-radius:4px;display:flex;overflow:hidden;color:var(--negro)}
+.sec{display:flex;flex-direction:column;justify-content:space-between;padding:6px 8px 6px;border-right:2px solid var(--negro);white-space:nowrap;overflow:hidden}
+.sec:last-child{border-right:0}
+.sec b{font-family:var(--display);font-weight:900;font-size:19px;line-height:.95}
+.sec span{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px}
+.sec span i{width:12px;height:8px;border-radius:2px;display:inline-block}
+.sec.actual{background:var(--amarillo)}
+.cabezal{position:absolute;top:0;bottom:0;width:2px;background:var(--rosa)}
+
+.panel{padding:12px 18px 14px;display:flex;flex-direction:column;gap:11px;min-height:0}
+.panel h2{margin:0;font-family:var(--display);font-weight:900;font-size:20px;line-height:1}
+.animo{display:flex;flex-direction:column;gap:8px}
+.animo .extremos{display:flex;justify-content:space-between;font-family:var(--display);font-weight:800;font-size:16px}
+.animo .extremos span:first-child{color:var(--turquesa)} .animo .extremos span:last-child{color:var(--rosa)}
+.pista-animo{position:relative;display:grid;grid-template-columns:repeat(12,1fr);gap:3px;height:14px}
+.pista-animo i{border-radius:2px;background:var(--chasis-alto)}
+.pista-animo i.on{background:var(--tinta-2)}
+.pista-animo b{position:absolute;top:-7px;width:16px;height:28px;border-radius:3px;background:var(--tinta);box-shadow:0 2px 0 rgba(0,0,0,.45)}
+.escenas{display:grid;grid-template-columns:repeat(3,1fr);gap:6px 8px}
+.esc{display:flex;flex-direction:column;gap:4px;font-weight:600;font-size:12px;color:var(--tinta-2)}
+.esc svg{width:100%;height:auto;aspect-ratio:16/9;border-radius:4px;display:block;background:#000}
+.esc.sel svg{outline:2px solid var(--tinta);outline-offset:2px}
+.esc.sel{color:var(--tinta)}
+.esc small{color:var(--tinta-3);font-weight:500}
+.mapeo{display:flex;flex-direction:column;gap:4px}
+.map{display:grid;grid-template-columns:22px 70px 14px 1fr 90px;align-items:center;gap:8px;height:30px;padding:0 10px;border-radius:6px;background:var(--pantalla)}
+.map b{font-weight:700}
+.map .dest{font-weight:600;color:var(--tinta-2)}
+.map .cant{height:6px;border-radius:3px;background:#3a3531;position:relative;overflow:hidden}
+.map .cant i{position:absolute;left:0;top:0;bottom:0;background:var(--tinta-2)}
+.toggles{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.toggle{display:flex;align-items:center;gap:8px;height:38px;padding:0 10px;border-radius:6px;background:var(--pantalla)}
+.toggle b{font-weight:700;font-size:12px;line-height:1.15}
+.toggle small{display:block;color:var(--tinta-3);font-size:11px;font-weight:500}
+.sw{margin-left:auto;flex:none;width:34px;height:20px;border-radius:999px;background:#3a3531;position:relative}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--tinta-3)}
+.sw.on{background:var(--verde)}
+.sw.on::after{left:auto;right:3px;background:var(--negro)}
+.acciones{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:auto}
+.principal{height:44px;border-radius:6px;background:var(--tinta);color:var(--negro);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.grabar{height:44px;border-radius:6px;background:var(--rosa);color:var(--negro);font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px}
+.seg{display:flex;background:var(--pantalla);border-radius:6px;padding:3px;gap:2px}
+.seg button{height:38px;padding:0 10px;border-radius:4px;font-weight:700;color:var(--tinta-2);font-size:12px}
+.seg button.on{background:var(--chasis-alto);color:var(--tinta)}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top surco-b">
+    <div class="logo">HOUSE</div>
+    <div class="proyecto"><b>Madrugada en la azotea</b><span>Tech house, guardado hace 40 s</span></div>
+    <div class="sep"></div>
+    <button class="btn icon" aria-label="Parar"><svg width="14" height="14" viewBox="0 0 14 14"><rect x="1" y="1" width="12" height="12" fill="currentColor"/></svg></button>
+    <button class="btn icon on" aria-label="Reproducir"><svg width="16" height="16" viewBox="0 0 16 16"><path d="M3 1.5 L14 8 L3 14.5 Z" fill="currentColor"/></svg></button>
+    <div class="lcd"><div><small>Compás</small><span class="n">29</span></div><div><small>Tiempo</small><span class="n">3</span></div></div>
+    <div class="lcd"><span class="bpm">126</span><small>BPM</small></div>
+    <div class="espacio"></div>
+    <div class="btn"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="1" width="10" height="14"/><circle cx="8" cy="10" r="2.5"/></svg>Bocina + Audífonos</div>
+  </header>
+
+  <nav class="pestanas" aria-label="Espacios">
+    <button class="on">Patrón <small>F1</small></button>
+    <button>Canción <small>F2</small></button>
+    <button>Mezcla <small>F3</small></button>
+    <button>Voz <small>F4</small></button>
+    <button>DJ <small>F5</small></button>
+    <div class="derecha"><button class="btn-vis"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="16" height="11"/><path d="M6 15h6M9 12v3"/><circle cx="9" cy="6.5" r="2.2"/></svg>Visuales abiertos<kbd>F6</kbd></button></div>
+  </nav>
+
+  <div class="cuerpo">
+    <section class="escenario surco-r" aria-label="Vista previa de la pantalla 2">
+      <div class="info">
+        <b>Pantalla 2</b><span>Proyector, 1920 × 1080, 60 fps, pantalla completa</span>
+        <span class="espacio"></span>
+        <span class="estado vivo"><i></i>En vivo</span>
+        <span class="estado seguro">Modo seguro</span>
+      </div>
+      <div class="pantalla2"><svg id="caleido" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Escena Caleidoscopio"></svg><div class="karaoke">Tú y yo en la azotea</div></div>
+      <div class="guia">
+        <div class="t"><b>Piloto automático: una escena por sección</b><span>Cambia sola al entrar cada sección; en el drop, explota.</span></div>
+        <div class="letrero" id="letrero"></div>
+      </div>
+      <div class="senales" aria-label="Señales que recibe la ventana">
+        <div><span class="t">Lo que escuchan los visuales</span><div class="espectro" id="espectro"></div></div>
+        <div class="golpes">
+          <div class="golpe on" style="--c:var(--naranja)"><i></i>Bombo</div>
+          <div class="golpe" style="--c:var(--naranja)"><i></i>Palmas</div>
+          <div class="golpe on" style="--c:var(--naranja)"><i></i>Hat</div>
+          <div class="golpe on" style="--c:var(--amarillo)"><i></i>Bajo</div>
+        </div>
+        <div class="cuenta"><small>Siguiente cambio</small><b>Pausa en 4 compases</b></div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="animo">
+        <h2>Ánimo</h2>
+        <div class="extremos"><span>Relax</span><span>Psicodélico</span></div>
+        <div class="pista-animo" id="animo"></div>
+      </div>
+      <div>
+        <h2 style="margin-bottom:10px">Escenas</h2>
+        <div class="escenas" id="escenas"></div>
+      </div>
+      <div>
+        <h2 style="margin-bottom:8px">Qué mueve qué</h2>
+        <div class="mapeo" id="mapeo"></div>
+      </div>
+      <div class="toggles">
+        <div class="toggle"><div><b>Piloto automático</b><small>Sigue las secciones</small></div><button class="sw on" role="switch" aria-label="Piloto automático" aria-checked="true"></button></div>
+        <div class="toggle"><div><b>Modo seguro</b><small>Máx. 3 destellos/s</small></div><button class="sw on" role="switch" aria-label="Modo seguro" aria-checked="true"></button></div>
+        <div class="toggle"><div><b>Sinestesia</b><small>Cada nota, un color</small></div><button class="sw" role="switch" aria-label="Sinestesia" aria-checked="false"></button></div>
+        <div class="toggle"><div><b>Letra en pantalla</b><small>Karaoke</small></div><button class="sw on" role="switch" aria-label="Letra en pantalla" aria-checked="true"></button></div>
+      </div>
+      <div class="acciones">
+        <button class="principal"><svg width="18" height="16" viewBox="0 0 18 16" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="16" height="11"/><path d="M6 15h6M9 12v3"/></svg>Abrir en pantalla 2</button>
+        <button class="grabar"><svg width="14" height="14" viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.5" fill="var(--negro)"/></svg>Grabar video</button>
+        <div class="seg"><button class="on">16:9</button><button>9:16</button></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const INK = {naranja:'#FF6B1A', amarillo:'#FFCB1F', azul:'#6F8BFF', rosa:'#F0168A', verde:'#7ED957', turquesa:'#19C2C2'};
+
+/* ---------- caleidoscopio (contenido de la escena, no interfaz) ---------- */
+(function(){
+  const P = ['#FF2E88','#FF7A1A','#FFD23F','#19E3D0','#8A5CFF','#FF4FD8'];
+  const pol = (r, a) => [r*Math.cos(a*Math.PI/180), r*Math.sin(a*Math.PI/180)];
+  let motif = '';
+  // arcos concéntricos dentro de la cuña
+  [[150,10,P[3]],[240,18,P[0]],[330,8,P[2]],[430,22,P[4]],[560,12,P[1]],[700,26,P[5]],[860,14,P[3]]].forEach(([r,w,c]) => {
+    const [x0,y0] = pol(r,0), [x1,y1] = pol(r,30);
+    motif += `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${c}" stroke-width="${w}" opacity=".9"/>`;
+  });
+  // pétalos sobre la bisectriz
+  [[120,70,20,P[2]],[300,120,34,P[0]],[500,150,40,P[3]],[760,190,52,P[1]]].forEach(([r,rx,ry,c]) => {
+    const [x,y] = pol(r,15);
+    motif += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="${rx}" ry="${ry}" transform="rotate(15 ${x.toFixed(1)} ${y.toFixed(1)})" fill="${c}" opacity=".78"/>`;
+  });
+  // círculos y ojos
+  [[200,6,26,P[4]],[380,24,34,P[5]],[620,5,40,P[2]],[640,25,22,P[3]],[900,18,60,P[0]]].forEach(([r,a,rad,c]) => {
+    const [x,y] = pol(r,a);
+    motif += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rad}" fill="${c}" opacity=".85"/><circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(rad*.45).toFixed(1)}" fill="#0A0412"/>`;
+  });
+  // triángulos que apuntan hacia afuera
+  [[380,560,P[1]],[980,1180,P[4]]].forEach(([r0,r1,c]) => {
+    const [a,b] = pol(r0,4), [cx,cy] = pol(r1,15), [d,e] = pol(r0,26);
+    motif += `<path d="M${a.toFixed(1)} ${b.toFixed(1)} L${cx.toFixed(1)} ${cy.toFixed(1)} L${d.toFixed(1)} ${e.toFixed(1)}Z" fill="${c}" opacity=".55"/>`;
+  });
+  const cuna = (() => { const [x,y] = pol(1400,30); return `M0 0 L1400 0 A1400 1400 0 0 1 ${x.toFixed(1)} ${y.toFixed(1)}Z`; })();
+  let copias = '';
+  for (let i = 0; i < 12; i++) {
+    const t = i % 2 ? `rotate(${(i+1)*30}) scale(1,-1)` : `rotate(${i*30})`;
+    copias += `<g transform="${t}"><use href="#motivo" clip-path="url(#cuna)"/></g>`;
+  }
+  let anillos = '';
+  for (let r = 60, k = 0; r < 1000; r += 34, k++) anillos += `<circle r="${r}" fill="none" stroke="${k%2 ? '#2A0B3D' : '#140621'}" stroke-width="17"/>`;
+  document.getElementById('caleido').innerHTML = `
+    <defs>
+      <radialGradient id="fondo" cx="50%" cy="50%" r="70%"><stop offset="0" stop-color="#3B0A45"/><stop offset=".55" stop-color="#13051F"/><stop offset="1" stop-color="#05030A"/></radialGradient>
+      <clipPath id="cuna"><path d="${cuna}"/></clipPath>
+      <g id="motivo">${motif}</g>
+      <filter id="brillo" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="14"/></filter>
+    </defs>
+    <rect width="1600" height="900" fill="url(#fondo)"/>
+    <g transform="translate(800 450)">
+      ${anillos}
+      <g filter="url(#brillo)" opacity=".7">${copias}</g>
+      <g>${copias}</g>
+      <circle r="58" fill="#FFD23F"/><circle r="40" fill="#FF2E88"/><circle r="22" fill="#19E3D0"/><circle r="9" fill="#0A0412"/>
+    </g>`;
+})();
+
+/* ---------- guía de escenas por sección ---------- */
+const secs = [['Intro',16,'Aurora','#19C2C2'],['Subida',8,'Túnel','#8A5CFF'],['¡Drop!',16,'Caleidoscopio','#FF2E88',1],['Pausa',8,'Océano','#2F6BFF'],['¡Drop!',16,'Caleidoscopio','#FF2E88'],['Salida',8,'Nebulosa','#6F8BFF']];
+const tot = secs.reduce((a,s)=>a+s[1],0);
+const L = document.getElementById('letrero');
+secs.forEach(([n,c,e,col,act]) => { const d = document.createElement('div'); d.className = 'sec' + (act?' actual':''); d.style.width = (c/tot*100)+'%'; d.innerHTML = `<b>${n}</b><span><i style="background:${col}"></i>${e}</span>`; L.appendChild(d); });
+L.insertAdjacentHTML('beforeend', `<div class="cabezal" style="left:${(28.6/tot*100).toFixed(2)}%"></div>`);
+
+/* ---------- espectro ---------- */
+document.getElementById('espectro').innerHTML = Array.from({length:48}, (_, i) => { const v = Math.max(.08, Math.min(1, (i < 6 ? .95 - i*.05 : .7*Math.exp(-i/22) + .12) + Math.abs(Math.sin(i*1.9))*.18)); return `<i style="height:${(v*100).toFixed(0)}%"></i>`; }).join('');
+
+/* ---------- ánimo ---------- */
+document.getElementById('animo').innerHTML = Array.from({length:12}, (_, i) => `<i class="${i < 9 ? 'on' : ''}"></i>`).join('') + `<b style="left:calc(75% - 8px)"></b>`;
+
+/* ---------- miniaturas de escenas ---------- */
+function mini(tipo){
+  const v = 'viewBox="0 0 160 90" preserveAspectRatio="xMidYMid slice"';
+  if (tipo === 'caleido') { let s=''; for (let i=0;i<12;i++){ s += `<g transform="rotate(${i*30} 80 45)"><ellipse cx="112" cy="45" rx="26" ry="8" fill="${['#FF2E88','#FFD23F','#19E3D0'][i%3]}" opacity=".85"/></g>`;} return `<svg ${v}><rect width="160" height="90" fill="#13051F"/>${s}<circle cx="80" cy="45" r="10" fill="#FFD23F"/><circle cx="80" cy="45" r="5" fill="#FF2E88"/></svg>`; }
+  if (tipo === 'tunel') { let s=''; for (let k=0;k<9;k++){ const w=160-k*17, h=90-k*9.6; s += `<rect x="${(160-w)/2}" y="${(90-h)/2}" width="${w}" height="${h}" fill="none" stroke="${k%2?'#8A5CFF':'#19E3D0'}" stroke-width="${5-k*.4}"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#07040E"/>${s}</svg>`; }
+  if (tipo === 'opart') { let s=''; for (let r=4;r<100;r+=6){ s += `<circle cx="70" cy="45" r="${r}" fill="none" stroke="#F3EDE2" stroke-width="2.6"/><circle cx="92" cy="45" r="${r}" fill="none" stroke="#F3EDE2" stroke-width="2.6" opacity=".6"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#0B0B0B"/>${s}</svg>`; }
+  if (tipo === 'plasma') return `<svg ${v}><defs><filter id="bl"><feGaussianBlur stdDeviation="9"/></filter></defs><rect width="160" height="90" fill="#240634"/><g filter="url(#bl)"><circle cx="40" cy="30" r="34" fill="#FF2E88"/><circle cx="110" cy="60" r="36" fill="#19E3D0"/><circle cx="90" cy="20" r="22" fill="#FFD23F"/><circle cx="30" cy="80" r="26" fill="#FF7A1A"/></g></svg>`;
+  if (tipo === 'aurora') return `<svg ${v}><defs><filter id="bl2"><feGaussianBlur stdDeviation="5"/></filter></defs><rect width="160" height="90" fill="#040B1A"/><g filter="url(#bl2)" opacity=".85"><path d="M-10 50 C30 20 60 60 100 30 S150 40 170 20 L170 40 C140 60 110 45 80 70 S20 60 -10 70Z" fill="#19E3A0"/><path d="M-10 35 C40 15 70 45 110 20 S160 30 170 10 L170 22 C130 40 100 30 70 55 S10 45 -10 50Z" fill="#6F8BFF" opacity=".7"/></g>${Array.from({length:14},(_,i)=>`<circle cx="${(i*37)%160}" cy="${(i*23)%40}" r=".9" fill="#fff"/>`).join('')}</svg>`;
+  if (tipo === 'oceano') { let s=''; for (let y=58;y<90;y+=5){ s += `<path d="M0 ${y} Q20 ${y-2} 40 ${y} T80 ${y} T120 ${y} T160 ${y}" fill="none" stroke="#2F6BFF" stroke-width="1.4" opacity="${.3+(y-58)/60}"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#050A1C"/><circle cx="112" cy="26" r="11" fill="#F3EDE2"/><rect x="108" y="56" width="8" height="30" fill="#F3EDE2" opacity=".25"/>${s}</svg>`; }
+  if (tipo === 'lluvia') { let s=''; for (let i=0;i<18;i++){ s += `<circle cx="${(i*53)%160}" cy="${(i*29)%90}" r="${3+(i%4)*2}" fill="${['#FFCB1F','#FF7A1A','#6F8BFF'][i%3]}" opacity=".35"/>`;} for (let i=0;i<22;i++){ s += `<line x1="${(i*31)%160}" y1="${(i*17)%90}" x2="${(i*31)%160-2}" y2="${(i*17)%90+10}" stroke="#B9D3FF" stroke-width="1" opacity=".6"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#0B1020"/>${s}</svg>`; }
+  if (tipo === 'lucis') { let s=''; for (let i=0;i<26;i++){ s += `<circle cx="${(i*47)%160}" cy="${20+(i*31)%70}" r="${1+(i%3)*.8}" fill="#FFE27A" opacity="${.5+(i%2)*.5}"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#06140E"/><path d="M0 90 L0 60 L20 40 L30 58 L50 30 L64 56 L90 36 L110 60 L130 44 L160 62 L160 90Z" fill="#031008"/>${s}</svg>`; }
+  if (tipo === 'sonidero') { let s=''; const cols=['#FF6B1A','#FFCB1F','#F0168A','#19C2C2','#7ED957','#6F8BFF']; for (let i=0;i<12;i++){ const h=18+((i*37)%60); s += `<rect x="${6+i*12.8}" y="${86-h}" width="9" height="${h}" fill="${cols[i%6]}"/><circle cx="${10.5+i*12.8}" cy="${80-h}" r="2.2" fill="#FFF3C4"/>`;} return `<svg ${v}><rect width="160" height="90" fill="#120F0D"/>${s}</svg>`; }
+}
+const escenas = [['caleido','Caleidoscopio','Psicodélica',1],['tunel','Túnel infinito','Psicodélica'],['opart','Mandala op-art','Psicodélica'],['plasma','Plasma líquido','Psicodélica'],['aurora','Aurora','Relajante'],['oceano','Océano de noche','Relajante'],['lluvia','Lluvia en la ventana','Relajante'],['lucis','Luciérnagas','Relajante'],['sonidero','Ecualizador sonidero','Fiesta']];
+document.getElementById('escenas').innerHTML = escenas.map(([t,n,a,sel]) => `<button class="esc${sel?' sel':''}">${mini(t)}<span>${n}</span></button>`).join('');
+
+/* ---------- mapeo ---------- */
+const PICT = {
+  bombo:  '<circle cx="14" cy="14" r="7.5" fill="none" stroke="#161412" stroke-width="3"/><circle cx="14" cy="14" r="2.5" fill="#161412"/>',
+  palmas: '<rect x="7" y="6" width="6" height="15" rx="3" transform="rotate(-18 10 13)" fill="#161412"/><rect x="15" y="6" width="6" height="15" rx="3" transform="rotate(18 18 13)" fill="#161412"/>',
+  bajo:   '<path d="M4 14c2.5-7 5.5-7 8 0s5.5 7 8 0 3-4 4-4" fill="none" stroke="#161412" stroke-width="3.2" stroke-linecap="square"/>',
+  voz:    '<rect x="10" y="4" width="8" height="13" rx="4" fill="#161412"/><path d="M7 13a7 7 0 0 0 14 0" fill="none" stroke="#161412" stroke-width="2.2"/><rect x="13" y="20" width="2" height="4" fill="#161412"/>',
+  acordes:'<rect x="6" y="6" width="16" height="4" fill="#161412"/><rect x="6" y="12" width="16" height="4" fill="#161412"/><rect x="6" y="18" width="16" height="4" fill="#161412"/>',
+};
+const pict = (k, ink, s = 22) => `<svg width="${s}" height="${s}" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="7" fill="${INK[ink]}"/>${PICT[k]}</svg>`;
+const flecha = '<svg width="14" height="10" viewBox="0 0 14 10" aria-hidden="true"><path d="M1 5h10M8 1.5 11.5 5 8 8.5" fill="none" stroke="#9A9185" stroke-width="2"/></svg>';
+document.getElementById('mapeo').innerHTML = [
+  ['bombo','naranja','Bombo','Zoom',.72], ['palmas','naranja','Palmas','Destello suave',.4], ['bajo','amarillo','Bajo','Ondulación',.58], ['acordes','azul','Acorde','Paleta',1],
+].map(([p,c,f,d,v]) => `<div class="map">${pict(p,c)}<b>${f}</b>${flecha}<span class="dest">${d}</span><span class="cant"><i style="width:${v*100}%"></i></span></div>`).join('');
+</script>
+</body>
+</html>
