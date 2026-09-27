@@ -3,8 +3,8 @@ import { releaseAll, togglePlay } from '../engine/audio';
 import { getProject, redo, undo } from '../state/store';
 import { closeDialog, openDialog, toast, useUi } from '../state/ui';
 import { saveNow } from '../state/persist';
-import { BANK_A, BANK_B, PIANO, SCALE_DEGREE } from './keys';
-import { hitNote, hitTrack, releaseNote, releaseTrack, scaleNote } from './play';
+import { BANK_A, BANK_B, PIANO, SCALE_DEGREE, SOUNDBOARD_CODES } from './keys';
+import { hitNote, hitShot, hitTrack, releaseNote, releaseTrack, scaleNote } from './play';
 import { releaseEverything } from './pressed';
 import { openVisuals } from '../visuals/link';
 
@@ -28,6 +28,12 @@ const velocity = (shift: boolean): number => (shift ? 1 : useUi.getState().kbVel
 
 function noteDown(code: string, shift: boolean): boolean {
   const ui = useUi.getState();
+  if (ui.kbMode === 'soundboard') {
+    if (!SOUNDBOARD_CODES.has(code)) return false;
+    // Shots end on their own: releasing the key changes nothing.
+    hitShot(code, velocity(shift));
+    return true;
+  }
   if (ui.kbMode === 'pads') {
     const a = BANK_A.indexOf(code);
     if (a >= 0) {
@@ -156,7 +162,7 @@ export function installKeyboard(): () => void {
     }
     if (e.altKey || !ui.keyboardOn) return;
     if (e.repeat) {
-      if (held.has(e.code)) e.preventDefault();
+      if (held.has(e.code) || (ui.kbMode === 'soundboard' && SOUNDBOARD_CODES.has(e.code))) e.preventDefault();
       return;
     }
     if (noteDown(e.code, e.shiftKey)) e.preventDefault();

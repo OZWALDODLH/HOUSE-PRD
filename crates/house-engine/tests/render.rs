@@ -296,3 +296,32 @@ fn renders_much_faster_than_real_time() {
     assert!(el < 20.0, "20 s of audio took {el} s");
     eprintln!("20 s de audio en {el:.3} s");
 }
+
+/// Soundboard shots sound on the master even with the transport stopped,
+/// never on the pre-listen bus, and are not cut by Stop.
+#[test]
+fn soundboard_shot_plays_on_master() {
+    let sr = 48_000.0;
+    let mut e = Engine::new(sr);
+    let mut params = [0.5f32; 8];
+    params[1] = 0.6;
+    e.apply(Command::Shot {
+        kind: house_engine::kind::DRUM,
+        model: 0,
+        note: 60,
+        vel: 1.0,
+        slot: 0,
+        params,
+    });
+    e.apply(Command::Stop);
+    let (mut peak, mut cue) = (0.0f32, 0.0f32);
+    for _ in 0..40 {
+        e.process(256);
+        for i in 0..256 {
+            peak = peak.max(e.out_l[i].abs());
+            cue = cue.max(e.out_cue_l[i].abs());
+        }
+    }
+    assert!(peak > 0.1, "shot too quiet: {peak}");
+    assert!(cue < 1e-6, "shot leaked to the cue bus: {cue}");
+}

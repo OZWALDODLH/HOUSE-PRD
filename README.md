@@ -34,7 +34,10 @@ Tauri. El estado exacto está en
    aprender con retos) y un estilo. Con el botón redondo escuchas cada estilo.
 2. **Espacio** reproduce o para. Las teclas `1 2 3 4`, `Q W E R`, `A S D F`,
    `Z X C V` tocan tus pistas; `7` a `-` tocan notas del bajo o sinte elegido,
-   siempre en la escala. **Tab** prende o apaga el teclado musical.
+   siempre en la escala. **Tab** prende o apaga el teclado musical. En modo
+   **Soundboard** cada tecla de letras y números dispara el sonido que le
+   pongas, aunque la canción esté parada: clic en una tecla vacía para darle
+   sonido, clic derecho para cambiarlo.
 3. Haz clic en los pasos para prender o apagar golpes (arrastra para pintar
    varios). En el bajo y los acordes, arrastra una nota hacia arriba o abajo
    para cambiarla: nunca se sale de la tonalidad.

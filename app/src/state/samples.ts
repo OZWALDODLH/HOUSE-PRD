@@ -42,9 +42,17 @@ export const getSample = (slot: number): SampleData | undefined => mem.get(slot)
 
 export const allSamples = (): Map<number, SampleData> => mem;
 
-/** First slot no track of the project uses. */
+/** Slots the project points to: its sampler tracks and its soundboard keys. */
+function usedSlots(p: Project): Set<number> {
+  const used = new Set<number>();
+  for (const t of p.tracks) if (t.sampleSlot !== undefined) used.add(t.sampleSlot);
+  for (const item of Object.values(p.soundboard)) if ('slot' in item) used.add(item.slot);
+  return used;
+}
+
+/** First slot nothing in the project uses. */
 export function freeSlot(p: Project): number {
-  const used = new Set(p.tracks.map((t) => t.sampleSlot).filter((x): x is number => x !== undefined));
+  const used = usedSlots(p);
   for (let i = 0; i < SLOTS; i++) if (!used.has(i)) return i;
   return -1;
 }
@@ -67,8 +75,7 @@ export async function putSample(projectId: string, slot: number, s: SampleData):
 export async function loadSamplesFor(p: Project): Promise<void> {
   mem.clear();
   memProject = p.id;
-  const slots = p.tracks.map((t) => t.sampleSlot).filter((x): x is number => x !== undefined);
-  for (const slot of slots) {
+  for (const slot of usedSlots(p)) {
     try {
       const v = (await tx('readonly', (st) => st.get(keyOf(p.id, slot)))) as SampleData | undefined;
       if (v && memProject === p.id) {

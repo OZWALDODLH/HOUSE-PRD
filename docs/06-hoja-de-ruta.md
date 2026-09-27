@@ -220,7 +220,7 @@ automática. Lo que falta es medir en equipo real y probar con personas.
 |---|---|
 | Motor: transporte, tempo, swing, 16/32/64 pasos, metrónomo | Hecho. |
 | Máquina, Ácido, 808, Analógico, Sampler básico | Hecho. |
-| Teclado musical: Pads, Piano, Escala | Hecho (16 pads de pistas + 16 notas en escala = 32 teclas). **Soundboard** pendiente. |
+| Teclado musical: Pads, Piano, Escala, Soundboard | Hecho: 16 pads de pistas + 16 notas en escala (32 teclas), piano, escala y Soundboard (40 teclas, cualquier sonido o tu voz, suena aunque la canción esté parada). |
 | Mezclador, bombeo en un clic, efectos esenciales, master | Hecho: dos envíos (espacio y eco), filtro de DJ, EQ de 3 bandas, saturación, compresor de pegamento, limitador y destino de volumen. |
 | Plantillas: tech house, techno, house, reggaetón, lo-fi | Hecho. |
 | Inicio, Patrón, Modo Fácil/Pro, 3 retos | Hecho, y además la pestaña Mezcla. |

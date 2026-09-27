@@ -23,6 +23,7 @@ export const OP = {
   PREVIEW: 19,
   SET_SAMPLE_SLOT: 20,
   CLEAR_STEPS: 21,
+  SHOT: 22,
 } as const;
 
 export const KIND = { NONE: 0, DRUM: 1, ACID: 2, BASS808: 3, POLY: 4, SAMPLER: 5 } as const;
@@ -145,4 +146,6 @@ export const cmd = {
   preview: (kind: number, model: number, note: number, vel: number, params: number[]): Cmd => [OP.PREVIEW, kind, model, note, vel, ...params.slice(0, 8)],
   sampleSlot: (track: number, slot: number): Cmd => [OP.SET_SAMPLE_SLOT, track, slot],
   clearSteps: (track: number): Cmd => [OP.CLEAR_STEPS, track],
+  /** Soundboard one-shot on the master bus. */
+  shot: (kind: number, model: number, note: number, vel: number, slot: number, params: number[]): Cmd => [OP.SHOT, kind, model, note, vel, slot, ...params.slice(0, 8)],
 };

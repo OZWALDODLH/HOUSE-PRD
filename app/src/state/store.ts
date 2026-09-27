@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import { MAX_TRACKS, type SectionKind } from '../engine/protocol';
 import { PRESETS, samplerTrack, trackFromSound, defaultNote, type Sound } from './instruments';
 import { SCALES, emptyStep, isMelodic, uid, type Family, type GenreId, type Master, type Project, type Section, type Step, type Track } from './model';
-import { newProjectFromGenre } from './templates';
+import { defaultSoundboard, newProjectFromGenre } from './templates';
 
 const HISTORY = 120;
 const COALESCE_MS = 900;
@@ -106,7 +106,7 @@ export function normalizeProject(p: Project): Project {
     params: [...t.params, ...Array(8).fill(0.5)].slice(0, 8),
     steps: [...t.steps, ...Array.from({ length: 64 }, emptyStep)].slice(0, 64).map((s) => ({ ...emptyStep(), ...s })),
   }));
-  return { ...p, tracks };
+  return { ...p, tracks, soundboard: p.soundboard ?? defaultSoundboard() };
 }
 
 // ---------------------------------------------------------------- project --
@@ -386,6 +386,17 @@ export function recordHit(id: string, i: number, vel: number, notes: number[] | 
       return setStepAt(t, i, { ...s, on: true, vel, notes: merged });
     }),
   );
+}
+
+// ------------------------------------------------------------- soundboard --
+
+export function assignSoundboard(code: string, item: Project['soundboard'][string] | null): void {
+  edit(null, (p) => {
+    const soundboard = { ...p.soundboard };
+    if (item) soundboard[code] = item;
+    else delete soundboard[code];
+    return { ...p, soundboard };
+  });
 }
 
 // --------------------------------------------------------------- sections --

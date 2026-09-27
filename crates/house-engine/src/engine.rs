@@ -20,6 +20,8 @@ pub const MAX_BLOCK: usize = 256;
 pub const SAMPLE_SLOTS: usize = 32;
 pub const NUM_PARAMS: usize = 8;
 pub const STATUS_LEN: usize = 64;
+/// Soundboard voices (one-shots on the master bus).
+pub const SHOT_VOICES: usize = 6;
 
 /// Instrument kinds used by `SetTrackKind`.
 pub mod kind {
@@ -224,6 +226,28 @@ fn note_off(inst: &mut Inst, note: u8) {
     }
 }
 
+/// A soundboard one-shot: its own instrument, freed after `life` samples.
+#[derive(Clone, Copy)]
+struct Shot {
+    inst: Inst,
+    params: [f32; NUM_PARAMS],
+    note: u8,
+    /// Samples until the note is released (synths); negative when done.
+    off: i64,
+    /// Samples until the voice is free again.
+    life: i64,
+    active: bool,
+}
+
+const SHOT_IDLE: Shot = Shot {
+    inst: Inst::None,
+    params: [0.5; NUM_PARAMS],
+    note: 60,
+    off: -1,
+    life: 0,
+    active: false,
+};
+
 #[derive(Clone, Copy, Default)]
 struct Section {
     bars: u32,
@@ -235,6 +259,8 @@ pub struct Engine {
     pub sr: f32,
     pub tracks: [Track; MAX_TRACKS],
     preview: Track,
+    shots: [Shot; SHOT_VOICES],
+    next_shot: usize,
     click: DrumVoice,
     playing: bool,
     bpm: f32,
@@ -300,6 +326,8 @@ impl Engine {
             sr,
             tracks: core::array::from_fn(|_| Track::new(sr)),
             preview: Track::new(sr),
+            shots: [SHOT_IDLE; SHOT_VOICES],
+            next_shot: 0,
             click: DrumVoice::new(DrumModel::Click, 99),
             playing: false,
             bpm: 124.0,
@@ -643,6 +671,48 @@ impl Engine {
                 p.offs = [NO_OFF; 8];
                 p.schedule_off(note, (0.45 * sr) as i64);
             }
+            Command::Shot {
+                kind,
+                model,
+                note,
+                vel,
+                slot,
+                params,
+            } => {
+                let i = self.next_shot;
+                self.next_shot = (i + 1) % SHOT_VOICES;
+                let bpm = self.bpm;
+                let bank = &self.bank;
+                let s = &mut self.shots[i];
+                s.inst = make_inst(kind, model, sr, 900 + i as u32);
+                s.params = params;
+                apply_params(&mut s.inst, &s.params, sr);
+                s.note = note;
+                s.life = (6.0 * sr) as i64;
+                s.off = (0.6 * sr) as i64;
+                s.active = kind != kind::NONE;
+                let vel = vel.clamp(0.0, 1.0);
+                match &mut s.inst {
+                    Inst::Drum(v) => v.trigger(vel, &s.params, sr, bpm),
+                    Inst::Acid(a) => a.note_on(note, vel, false, false, sr),
+                    Inst::Bass(b) => b.note_on(note, vel, false, sr),
+                    Inst::Poly(p) => p.note_on(note, vel),
+                    Inst::Sampler(sm) => {
+                        sm.slot = (slot as usize).min(SAMPLE_SLOTS - 1);
+                        sm.note_on(note, vel, bank, sr);
+                        // A recorded sound plays to its end.
+                        s.off = s.life;
+                    }
+                    Inst::None => {}
+                }
+                if let Inst::Drum(v) = &s.inst {
+                    let c = v.model.hit_class();
+                    if c > 0 {
+                        let h = &mut self.hits[(c - 1) as usize];
+                        *h = h.max(vel);
+                    }
+                }
+            }
             Command::SetSampleSlot { track, slot } => {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     if let Inst::Sampler(s) = &mut t.inst {
@@ -947,6 +1017,39 @@ impl Engine {
             }
             let acc = &mut self.track_peak_acc[ti];
             *acc = acc.max(peak);
+        }
+        // Soundboard one-shots go to the master bus, with a touch of reverb.
+        {
+            let bank = &self.bank;
+            for s in self.shots.iter_mut() {
+                if !s.active {
+                    continue;
+                }
+                for i in 0..n {
+                    let x = match &mut s.inst {
+                        Inst::Drum(v) => v.next(sr),
+                        Inst::Acid(a) => a.next(sr),
+                        Inst::Bass(b) => b.next(sr),
+                        Inst::Poly(pl) => pl.next(sr),
+                        Inst::Sampler(sm) => sm.next(bank),
+                        Inst::None => 0.0,
+                    } * 0.8;
+                    self.mix_l[offset + i] += x;
+                    self.mix_r[offset + i] += x;
+                    self.rev_in[offset + i] += x * 0.12;
+                }
+                if s.off > 0 {
+                    s.off -= n as i64;
+                    if s.off <= 0 {
+                        let note = s.note;
+                        note_off(&mut s.inst, note);
+                    }
+                }
+                s.life -= n as i64;
+                if s.life <= 0 {
+                    *s = SHOT_IDLE;
+                }
+            }
         }
         // Preview (sounds auditioned from the browser) and metronome go to the cue bus.
         {

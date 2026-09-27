@@ -65,3 +65,7 @@ export function keyLabel(code: string): string {
   if (code.startsWith('Digit')) return code.slice(5);
   return FALLBACK[code] ?? code;
 }
+
+/** Soundboard: every letter and number key, top row first. */
+export const SOUNDBOARD_ROWS = [...SCALE_ROWS].reverse();
+export const SOUNDBOARD_CODES = new Set(SCALE_ROWS.flat());

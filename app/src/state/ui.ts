@@ -4,7 +4,7 @@ import type { OutputRouting } from '../engine/bridge';
 
 export type Screen = 'inicio' | 'estudio';
 export type Tab = 'patron' | 'mezcla';
-export type KbMode = 'pads' | 'piano' | 'escala';
+export type KbMode = 'pads' | 'piano' | 'escala' | 'soundboard';
 export type Dialog = null | 'salidas' | 'exportar' | 'grabar' | 'proyectos' | 'atajos' | 'visuales';
 export type Tone = 'info' | 'bien' | 'error';
 

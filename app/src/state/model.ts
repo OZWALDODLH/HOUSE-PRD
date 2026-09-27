@@ -81,6 +81,9 @@ export interface Master {
   target: 'streaming' | 'club' | 'maximo';
 }
 
+/** What a soundboard key plays: a catalog sound or audio you recorded. */
+export type SoundboardItem = { sound: string } | { slot: number; name: string; family: Family };
+
 export interface Project {
   id: string;
   name: string;
@@ -94,6 +97,8 @@ export interface Project {
   master: Master;
   metronome: boolean;
   sidechainTrack: string | null;
+  /** Key code (KeyboardEvent.code) → sound, for the Soundboard mode. */
+  soundboard: Record<string, SoundboardItem>;
   createdAt: number;
   updatedAt: number;
 }

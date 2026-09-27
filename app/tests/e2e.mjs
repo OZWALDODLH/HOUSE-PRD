@@ -90,6 +90,23 @@ try {
     return 'ok';
   });
 
+  await check('El Soundboard suena aunque la canción esté parada', async () => {
+    await page.getByRole('radio', { name: 'Soundboard' }).click();
+    await page.keyboard.press('KeyA');
+    await page.waitForTimeout(150);
+    const s = await status();
+    assert(s[0] === 0, 'la canción debería estar parada');
+    assert(s[8] > 0.1, `sin sonido (${s[8]})`);
+    // Right click changes a key's sound; the picker marks the current one.
+    await page.getByRole('button', { name: /^Bombo rumble, tecla A/ }).click({ button: 'right' });
+    const marked = await page.locator('.sb-lista button.actual').innerText();
+    assert(marked.includes('Bombo rumble'), `marcado: ${marked}`);
+    await page.getByRole('button', { name: 'Conga alta', exact: true }).click();
+    await page.getByRole('button', { name: /^Conga alta, tecla A/ }).waitFor();
+    await page.getByRole('radio', { name: 'Pads' }).click();
+    return `pico ${s[8].toFixed(2)}`;
+  });
+
   await check('Exportar canción escribe un WAV válido', async () => {
     await page.getByRole('button', { name: 'Exportar', exact: true }).click();
     const dl = page.waitForEvent('download', { timeout: 90000 });

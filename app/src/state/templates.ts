@@ -150,6 +150,29 @@ const master = (m: Partial<Master> = {}): Master => ({
   ...m,
 });
 
+/** A soundboard that already plays: transitions and percussion for jams and DJ sets. */
+export function defaultSoundboard(): Project['soundboard'] {
+  const map: [string, string][] = [
+    ['Digit1', 'impacto'],
+    ['Digit2', 'subida'],
+    ['Digit3', 'platillo'],
+    ['Digit4', 'cencerro'],
+    ['KeyQ', 'palmas-grandes'],
+    ['KeyW', 'timbal'],
+    ['KeyE', 'conga-baja'],
+    ['KeyR', 'rim'],
+    ['KeyA', 'bombo-rumble'],
+    ['KeyS', 'caja-dembow'],
+    ['KeyD', 'hat-abierto'],
+    ['KeyF', 'shaker'],
+    ['KeyZ', '808-sucio'],
+    ['KeyX', 'acido-clasico'],
+    ['KeyC', 'stab-organo'],
+    ['KeyV', 'lead'],
+  ];
+  return Object.fromEntries(map.map(([code, sound]) => [code, { sound }]));
+}
+
 function project(genre: GenreId, name: string, bpm: number, swing: number, key: Project['key'], tracks: Track[], secs: Section[], m: Master): Project {
   const kick = tracks.find((t) => t.pict === 'bombo');
   const now = Date.now();
@@ -166,6 +189,7 @@ function project(genre: GenreId, name: string, bpm: number, swing: number, key: 
     master: m,
     metronome: false,
     sidechainTrack: kick?.id ?? null,
+    soundboard: defaultSoundboard(),
     createdAt: now,
     updatedAt: now,
   };

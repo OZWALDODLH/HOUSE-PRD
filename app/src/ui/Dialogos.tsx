@@ -577,6 +577,7 @@ function Atajos() {
     ['Tab', 'Prender o apagar el teclado musical'],
     ['1 a V', 'Tus pistas (pads del banco A)'],
     ['7 a -', 'Notas del bajo o sinte elegido (banco B)'],
+    ['Soundboard', 'Cada tecla de letras y números dispara su sonido; clic derecho para cambiarlo'],
     ['Shift + tecla', 'Golpe con acento'],
     ['Ctrl + Z', 'Deshacer'],
     ['Ctrl + Shift + Z', 'Rehacer'],

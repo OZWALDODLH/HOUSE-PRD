@@ -1,14 +1,15 @@
 // Pads (your tracks), piano and scale keys. Mouse, touch and the computer keyboard.
-import { useEffect, useReducer, useRef, type CSSProperties, type DragEvent, type PointerEvent, type ReactNode } from 'react';
+import { useEffect, useReducer, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
 import { ST } from '../engine/protocol';
-import { BANK_A, PIANO, SCALE_ROWS, keyLabel, onLayout } from '../input/keys';
-import { hitNote, hitTrack, noteTrack, releaseNote, releaseTrack, scaleNote } from '../input/play';
+import { BANK_A, PIANO, SCALE_ROWS, SOUNDBOARD_ROWS, keyLabel, onLayout } from '../input/keys';
+import { hitNote, hitShot, hitTrack, noteTrack, releaseNote, releaseTrack, scaleNote } from '../input/play';
 import { useHeld } from '../input/pressed';
-import { soundById } from '../state/instruments';
-import { NOTE_NAMES, SCALES, type Track } from '../state/model';
-import { addTrack, useStudio } from '../state/store';
+import { FAMILY_NAME, SOUNDS, soundById } from '../state/instruments';
+import { NOTE_NAMES, SCALES, type Family, type Pict as PictId, type SoundboardItem, type Track } from '../state/model';
+import { addTrack, assignSoundboard, useStudio } from '../state/store';
 import { toast, useUi, type KbMode } from '../state/ui';
-import { INK } from './Pict';
+import { INK, Pict } from './Pict';
+import { Icon } from './Icon';
 import { Seg } from './controls';
 import { useFrame } from './frame';
 
@@ -24,19 +25,22 @@ export function Pads() {
   return (
     <div className="pads">
       <div className="cab-pads">
-        <h3>{kbMode === 'pads' ? 'Pads' : kbMode === 'piano' ? 'Piano' : 'Escala'}</h3>
-        <span className="nota-pads" title={keyboardOn ? 'El teclado de tu computadora toca estos sonidos' : 'Prende el teclado musical con Tab'}>
-          {kbMode === 'pads' ? (
-            <>
-              <b>7 a {keyLabel('Slash')}</b> tocan {target ? target.name : 'un bajo o sinte'}
-            </>
-          ) : (
-            <>
-              Tocas <b>{target ? target.name : 'un bajo o sinte'}</b>
-              {kbMode === 'piano' ? `, ${keyLabel('KeyZ')} ${keyLabel('KeyX')} octava` : ''}
-            </>
-          )}
-        </span>
+        <h3>{kbMode === 'pads' ? 'Pads' : kbMode === 'piano' ? 'Piano' : kbMode === 'escala' ? 'Escala' : 'Soundboard'}</h3>
+        {kbMode !== 'soundboard' && (
+          <span className="nota-pads" title={keyboardOn ? 'El teclado de tu computadora toca estos sonidos' : 'Prende el teclado musical con Tab'}>
+            {kbMode === 'pads' ? (
+              <>
+                <b>7 a {keyLabel('Slash')}</b> tocan {target ? target.name : 'un bajo o sinte'}
+              </>
+            ) : (
+              <>
+                Tocas <b>{target ? target.name : 'un bajo o sinte'}</b>
+                {kbMode === 'piano' ? `, ${keyLabel('KeyZ')} ${keyLabel('KeyX')} octava` : ''}
+              </>
+            )}
+          </span>
+        )}
+        {kbMode === 'soundboard' && <span className="espacio" />}
         <Seg<KbMode>
           small
           label="Modo del teclado musical"
@@ -46,12 +50,14 @@ export function Pads() {
             { id: 'pads', text: 'Pads' },
             { id: 'piano', text: 'Piano' },
             { id: 'escala', text: 'Escala' },
+            { id: 'soundboard', text: 'Soundboard', title: 'Cualquier sonido en cualquier tecla' },
           ]}
         />
       </div>
       {kbMode === 'pads' && <Rejilla />}
       {kbMode === 'piano' && <Piano />}
       {kbMode === 'escala' && <Escala />}
+      {kbMode === 'soundboard' && <Soundboard />}
     </div>
   );
 }
@@ -205,5 +211,129 @@ function Escala() {
         );
       })}
     </div>
+  );
+}
+
+// ------------------------------------------------------------- soundboard --
+
+function describe(item: SoundboardItem): { name: string; pict: PictId; family: Family } | null {
+  if ('sound' in item) {
+    const s = soundById(item.sound);
+    return s ? { name: s.name, pict: s.pict, family: s.family } : null;
+  }
+  return { name: item.name, pict: item.family === 'voz' ? 'voz' : 'sample', family: item.family };
+}
+
+function Soundboard() {
+  const board = useStudio((s) => s.project.soundboard);
+  const tracks = useStudio((s) => s.project.tracks);
+  const [picking, setPicking] = useState<string | null>(null);
+  const own = tracks.filter((t) => t.kind === 'sampler' && t.sampleSlot !== undefined);
+  const current = picking ? board[picking] : undefined;
+  const choose = (item: SoundboardItem | null) => {
+    if (picking) assignSoundboard(picking, item);
+    setPicking(null);
+  };
+  const mark = (item: SoundboardItem) => (sameItem(current, item) ? 'actual' : undefined);
+  const list = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!picking) return;
+    // Focus lands on the key's sound (or the first one), and Escape closes.
+    const el = list.current;
+    (el?.querySelector<HTMLButtonElement>('button.actual') ?? el?.querySelector<HTMLButtonElement>('button'))?.focus();
+    const onKey = (e: KeyboardEvent) => e.code === 'Escape' && setPicking(null);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [picking]);
+  return (
+    <div className="sb">
+      {SOUNDBOARD_ROWS.map((row, r) => (
+        <div className="sb-fila" key={r}>
+          {row.map((code) => (
+            <TeclaSb key={code} code={code} item={board[code]} onPick={() => setPicking(code)} />
+          ))}
+        </div>
+      ))}
+      {picking && (
+        <div className="sb-picker" role="dialog" aria-label={`Sonido para la tecla ${keyLabel(picking)}`}>
+          <header>
+            <b>Tecla {keyLabel(picking)}: elige un sonido</b>
+            {current && (
+              <button className="btn chico" onClick={() => choose(null)}>
+                Dejarla vacía
+              </button>
+            )}
+            <button className="btn chico icono" onClick={() => setPicking(null)} aria-label="Cancelar">
+              <Icon name="cerrar" size={14} />
+            </button>
+          </header>
+          <div className="sb-lista" ref={list}>
+            {own.map((t) => {
+              const item: SoundboardItem = { slot: t.sampleSlot!, name: t.name, family: t.family };
+              return (
+                <button key={t.id} className={mark(item)} onClick={() => choose(item)}>
+                  <Pict pict={t.pict} family={t.family} size={22} />
+                  {t.name}
+                </button>
+              );
+            })}
+            {SOUNDS.map((s) => (
+              <button key={s.id} className={mark({ sound: s.id })} onClick={() => choose({ sound: s.id })} title={FAMILY_NAME[s.family]}>
+                <Pict pict={s.pict} family={s.family} size={22} />
+                {s.name}
+              </button>
+            ))}
+          </div>
+          <p className="sb-ayuda">Clic derecho en cualquier tecla para cambiar su sonido.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function sameItem(a: SoundboardItem | undefined, b: SoundboardItem): boolean {
+  if (!a) return false;
+  if ('sound' in a) return 'sound' in b && a.sound === b.sound;
+  return 'slot' in b && a.slot === b.slot;
+}
+
+function TeclaSb({ code, item, onPick }: { code: string; item?: SoundboardItem; onPick: () => void }) {
+  const held = useHeld(`sb:${code}`);
+  const info = item ? describe(item) : null;
+  const label = keyLabel(code);
+  // Right click (a long press on touch screens) changes the sound of any key.
+  const onContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    onPick();
+  };
+  const onDrop = (e: DragEvent) => {
+    const id = e.dataTransfer.getData('text/house-sound');
+    if (!soundById(id)) return;
+    e.preventDefault();
+    assignSoundboard(code, { sound: id });
+  };
+  const drop = { onDragOver: (e: DragEvent) => e.preventDefault(), onDrop };
+  if (!info) {
+    return (
+      <button className="sb-tecla vacia" onClick={onPick} onContextMenu={onContextMenu} {...drop} aria-label={`Tecla ${label} sin sonido. Elegir sonido`} title="Elige un sonido o arrastra uno aquí">
+        <b>{label}</b>
+      </button>
+    );
+  }
+  return (
+    <button
+      className={`sb-tecla${held ? ' golpe' : ''}`}
+      style={{ '--c': INK[info.family] } as CSSProperties}
+      onPointerDown={(e) => e.button === 0 && hitShot(code, 0.9)}
+      // Enter on a focused key plays it too (a keyboard click has no pointer).
+      onClick={(e) => e.detail === 0 && hitShot(code, 0.9)}
+      onContextMenu={onContextMenu}
+      {...drop}
+      aria-label={`${info.name}, tecla ${label}. Clic derecho para cambiarlo`}
+      title={`${info.name}. Clic derecho para cambiarlo`}
+    >
+      <Pict pict={info.pict} family={info.family} size={20} />
+      <b>{label}</b>
+    </button>
   );
 }

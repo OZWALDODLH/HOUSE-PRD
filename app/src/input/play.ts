@@ -1,6 +1,7 @@
 // Playing sounds by hand (pads on screen or keys), with optional live recording.
-import { padOff, padOn, quantizedStep } from '../engine/audio';
-import { defaultNote } from '../state/instruments';
+import { padOff, padOn, quantizedStep, startAudio } from '../engine/audio';
+import { KIND, cmd } from '../engine/protocol';
+import { KIND_CODE, PRESETS, defaultNote, soundById } from '../state/instruments';
 import { isMelodic, type Track } from '../state/model';
 import { getProject, recordHit, trackById } from '../state/store';
 import { useUi } from '../state/ui';
@@ -61,4 +62,25 @@ export function scaleNote(degree: number): number {
   // Bass tracks sound two octaves lower than chords and leads.
   const shift = t && (t.kind === 'acid' || t.kind === 'bass808') ? -2 : 0;
   return degreeNote(p.key, degree, (octave + shift) * 12);
+}
+
+/** Plays a soundboard key: a one-shot on the master bus, whatever is playing. */
+export function hitShot(code: string, vel: number): boolean {
+  const p = getProject();
+  const item = p.soundboard[code];
+  if (!item) return false;
+  press(`sb:${code}`);
+  setTimeout(() => release(`sb:${code}`), 140);
+  let c: number[] | null = null;
+  if ('sound' in item) {
+    const s = soundById(item.sound);
+    if (s) {
+      const note = s.kind === 'acid' || s.kind === 'bass808' ? 36 + p.key.root : s.kind === 'poly' ? 60 + p.key.root : 60;
+      c = cmd.shot(KIND_CODE[s.kind], s.model, note, vel, 0, s.params);
+    }
+  } else {
+    c = cmd.shot(KIND.SAMPLER, 0, 60, vel, item.slot, PRESETS.sampler[0].params);
+  }
+  if (c) void startAudio().then((b) => b?.send([c]));
+  return true;
 }

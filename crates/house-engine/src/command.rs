@@ -79,6 +79,16 @@ pub enum Command {
     ClearSteps {
         track: u8,
     },
+    /// One-shot on the master bus (soundboard): plays whatever the transport
+    /// does, on its own voice, and is not cut by Stop.
+    Shot {
+        kind: u8,
+        model: u8,
+        note: u8,
+        vel: f32,
+        slot: u8,
+        params: [f32; 8],
+    },
 }
 
 pub mod op {
@@ -103,6 +113,7 @@ pub mod op {
     pub const PREVIEW: u32 = 19;
     pub const SET_SAMPLE_SLOT: u32 = 20;
     pub const CLEAR_STEPS: u32 = 21;
+    pub const SHOT: u32 = 22;
 }
 
 /// Mixer parameter ids for `SetMix`.
@@ -255,6 +266,22 @@ pub fn decode(a: &[f64]) -> Option<Command> {
             slot: u8_at(a, 2),
         },
         op::CLEAR_STEPS => Command::ClearSteps { track: u8_at(a, 1) },
+        op::SHOT => {
+            let mut params = [0.5f32; 8];
+            for (i, p) in params.iter_mut().enumerate() {
+                if let Some(v) = a.get(6 + i) {
+                    *p = (*v as f32).clamp(0.0, 1.0);
+                }
+            }
+            Command::Shot {
+                kind: u8_at(a, 1),
+                model: u8_at(a, 2),
+                note: u8_at(a, 3),
+                vel: f_at(a, 4),
+                slot: u8_at(a, 5),
+                params,
+            }
+        }
         _ => return None,
     })
 }

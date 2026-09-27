@@ -105,8 +105,6 @@ candidatas.
 
 ## Pendientes que salieron al construir la Fase 1
 
-- **Soundboard**: arrastrar cualquier sonido a cualquier tecla (F1 en el
-  plan; quedó fuera de esta entrega).
 - **Exportar MP3 o M4A**: LAME como programa aparte en escritorio, o el
   codificador del sistema (Media Foundation, AudioToolbox).
 - **Carril de fuerza** por paso y probabilidad (F2), además de la rueda del
