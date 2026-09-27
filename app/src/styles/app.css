@@ -1,14 +1,14 @@
 /* HOUSE interface. Values come from DESIGN.md; control tones from section 2.4. */
 
 :root {
-  /* DESIGN.md 2.4: tonos de controles (derivados del chasis). */
+  /* DESIGN.md 2.4: tonos de controles (matices del chasis). */
   --paso: #3b3631;
   --paso-b: #2f2b27;
-  --led-off: #3a3531;
+  --led-apagado: #3a3531;
   --rollo: #1f1c1a;
   --rollo-b: #221f1c;
   --rollo-linea: #2e2a26;
-  --foco-off: #cfc5b5;
+  --foco-apagado: #cfc5b5;
   --papel-tinta-2: #5a524a;
 }
 
@@ -131,7 +131,7 @@
   width: 38px;
   height: 22px;
   border-radius: 999px;
-  background: var(--led-off);
+  background: var(--led-apagado);
   position: relative;
   transition: background var(--t-toggle) var(--curva);
 }
@@ -241,7 +241,7 @@ select.campo-texto {
   top: 8px;
   height: 4px;
   border-radius: 2px;
-  background: var(--led-off);
+  background: var(--led-apagado);
 }
 .fader-h b {
   position: absolute;
@@ -321,7 +321,7 @@ select.campo-texto {
 .medidor-h i {
   width: 3px;
   height: 9px;
-  background: var(--led-off);
+  background: var(--led-apagado);
   display: block;
 }
 .medidor-v {
@@ -333,7 +333,7 @@ select.campo-texto {
 .medidor-v i {
   height: 3px;
   width: 8px;
-  background: var(--led-off);
+  background: var(--led-apagado);
   display: block;
 }
 .medidor-h i.v,
@@ -889,7 +889,7 @@ button.logo:hover {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--foco-off);
+  background: var(--foco-apagado);
 }
 .focos i.on {
   background: var(--amarillo);
@@ -901,7 +901,7 @@ button.logo:hover {
 }
 @keyframes foco {
   0% {
-    background: var(--foco-off);
+    background: var(--foco-apagado);
     box-shadow: none;
   }
   40% {
@@ -2518,4 +2518,37 @@ button.proy:hover {
   .top .btn[aria-label='Rehacer'] {
     display: none;
   }
+}
+
+/* ------------------------------------------------------ pantalla chica -- */
+
+.chica {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: var(--papel);
+  color: var(--negro);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+.chica h1 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 900;
+  font-size: clamp(44px, 14vw, 64px);
+  line-height: 0.92;
+}
+.chica p {
+  margin: 0;
+  font-size: 16px;
+  color: var(--papel-tinta-2);
+  max-width: 36ch;
+}
+.chica .cta {
+  flex: none;
+  align-self: flex-start;
 }

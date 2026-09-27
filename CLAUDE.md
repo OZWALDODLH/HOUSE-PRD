@@ -8,8 +8,9 @@ HOUSE (nombre clave) es una app de escritorio para crear música electrónica y
 urbana (tech house, techno, reggaetón y más), mezclarla como DJ con salida a
 audífonos y bocina por separado, grabar voz y proyectar visuales reactivos en
 un segundo monitor. Público: gente joven de habla hispana, muchas personas
-sin conocimientos de música. Hoy el repositorio contiene el plan; el código
-empieza en la Fase 0.
+sin conocimientos de música. El repositorio tiene el plan y la app: motor de
+audio en Rust, interfaz en React y app de escritorio con Tauri. El estado de
+cada fase está en `docs/06-hoja-de-ruta.md`, sección 6.9.
 
 ## Idioma
 
@@ -26,6 +27,26 @@ empieza en la Fase 0.
 - `diseno/`: bocetos HTML de las pantallas (`bocetos/`) y sus capturas
   (`capturas/`).
 - `.claude/skills/house-ui` y `.claude/skills/frontend-design`: skills de diseño.
+- `crates/house-engine/`: motor de audio (sin dependencias). Corre como
+  WebAssembly en un AudioWorklet y nativo en la app de escritorio. Protocolo de
+  comandos en `command.rs`; el espejo en TypeScript es `app/src/engine/protocol.ts`.
+- `app/`: interfaz (React 19 + TypeScript + Vite). `src/state` (documento,
+  plantillas, guardado), `src/engine` (puentes al motor, sincronización,
+  exportar), `src/ui` (componentes del sistema de diseño), `src/screens`,
+  `src/visuals` (escenas y modo seguro), `tests/e2e.mjs` (pruebas en navegador).
+- `src-tauri/`: app de escritorio (audio nativo con `cpal`, dos salidas).
+- `scripts/`, `deny.toml`, `.github/workflows/ci.yml`: build del motor,
+  licencias y CI.
+
+## Cómo probar
+
+- Motor y escritorio: `cargo test --workspace --release`.
+- Si cambias el motor: `bash scripts/build-wasm.sh` y sube también
+  `app/src/engine/house_engine.wasm` (la interfaz lo usa tal cual).
+- Interfaz: `npm --prefix app run typecheck`, `npm --prefix app run build` y
+  `npm --prefix app run test:e2e` (Chromium real: audio, exportar, visuales y
+  modo seguro).
+- Licencias: `cargo deny check licenses` y `node scripts/check-licenses.mjs`.
 
 ## Reglas de trabajo
 

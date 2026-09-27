@@ -1,5 +1,5 @@
 // The main window: Inicio or Estudio, plus dialogs and notices.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useUi } from './state/ui';
 import { Inicio } from './screens/Inicio';
 import { Estudio } from './screens/Estudio';
@@ -26,11 +26,38 @@ function AudioError() {
   );
 }
 
+const ANCHO_MINIMO = 900;
+
+/** On a phone: HOUSE is made for a computer keyboard. Offer to look anyway. */
+function PantallaChica({ onAnyway }: { onAnyway: () => void }) {
+  return (
+    <div className="chica" role="dialog" aria-modal="true" aria-label="HOUSE en pantalla chica">
+      <svg width="64" height="64" viewBox="0 0 28 28" aria-hidden="true">
+        <rect width="28" height="28" rx="7" fill="var(--rosa)" />
+        <circle cx="14" cy="14" r="7.5" fill="none" stroke="#161412" strokeWidth="3" />
+        <circle cx="14" cy="14" r="2.5" fill="#161412" />
+      </svg>
+      <h1>HOUSE se toca con teclado</h1>
+      <p>Está hecha para computadora: tu teclado se vuelve pads y en la pantalla grande ves todas las pistas. Ábrela en tu compu para usarla bien.</p>
+      <button className="cta" onClick={onAnyway}>
+        Verla de todos modos
+      </button>
+    </div>
+  );
+}
+
 export function App() {
   const { screen, dialog, lessMotion } = useUi();
+  const [chica, setChica] = useState(() => window.innerWidth < ANCHO_MINIMO);
   useEffect(() => {
     document.documentElement.classList.toggle('menos-movimiento', lessMotion);
   }, [lessMotion]);
+  const anyway = () => {
+    // Shows the whole studio, scaled down to the width of the screen.
+    document.documentElement.style.setProperty('zoom', String(window.innerWidth / 1280));
+    setChica(false);
+  };
+  if (chica) return <PantallaChica onAnyway={anyway} />;
   return (
     <>
       {/* While a dialog is open, the screen behind it can't take focus or clicks. */}

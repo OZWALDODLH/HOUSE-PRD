@@ -102,3 +102,18 @@ candidatas.
 - Plan Pro (stems con IA, Copiloto, plugins).
 - Paquetes de productores latinos, con reparto para quienes los hacen.
 - Versión para escuelas y talleres.
+
+## Pendientes que salieron al construir la Fase 1
+
+- **Soundboard**: arrastrar cualquier sonido a cualquier tecla (F1 en el
+  plan; quedó fuera de esta entrega).
+- **Exportar MP3 o M4A**: LAME como programa aparte en escritorio, o el
+  codificador del sistema (Media Foundation, AudioToolbox).
+- **Carril de fuerza** por paso y probabilidad (F2), además de la rueda del
+  ratón que ya cambia la fuerza en Pro.
+- **Página de catálogo** de componentes (Ladle) para revisar el sistema de
+  diseño sin abrir la app.
+- **Micrófono en Linux** dentro de la app de escritorio (WebKitGTK necesita
+  permisos de medios).
+- **Mover el documento a Rust** cuando llegue la Cabina DJ (ver 5.14).
+

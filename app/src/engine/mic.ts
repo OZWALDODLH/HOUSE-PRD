@@ -1,4 +1,5 @@
 // Microphone: list inputs, show the level and record a take (raw, no codec).
+import { addWorkletModule } from './modules';
 
 const RECORDER = `
 class HouseRecorder extends AudioWorkletProcessor {
@@ -80,9 +81,7 @@ export class Mic {
     });
     const ctx = new AudioContext({ latencyHint: 'interactive' });
     this.ctx = ctx;
-    const url = URL.createObjectURL(new Blob([RECORDER], { type: 'text/javascript' }));
-    await ctx.audioWorklet.addModule(url);
-    URL.revokeObjectURL(url);
+    await addWorkletModule(ctx, RECORDER);
     const src = ctx.createMediaStreamSource(this.stream);
     // Some browsers only run nodes that reach the speakers: connect through silence.
     const node = new AudioWorkletNode(ctx, 'house-recorder', { numberOfInputs: 1, numberOfOutputs: 1, outputChannelCount: [1] });

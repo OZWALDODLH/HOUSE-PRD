@@ -196,3 +196,44 @@ Una app de música es tan buena como sus sonidos. Plan:
   `frontend-design` de `.claude/skills/` y respeta `DESIGN.md`.
 - `CLAUDE.md` en la raíz resume las decisiones para que cada sesión nueva
   arranque con el contexto correcto.
+
+## 6.9 Estado (septiembre de 2026)
+
+La Fase 0 y el núcleo de la Fase 1 están construidos y probados de forma
+automática. Lo que falta es medir en equipo real y probar con personas.
+
+### Fase 0
+
+| Entregable | Estado |
+|---|---|
+| Spike 1: tecla › sonido | Hecho: audio nativo con `cpal`, bloques de 256 muestras (5.3 ms a 48 kHz) y la tecla dispara el sonido sin pasar por el secuenciador. **Falta medir** los 10 ms en Windows y Mac con equipo real. |
+| Spike 2: dos salidas 30 minutos | Hecho: pre-escucha en otro aparato con remuestreo adaptativo. Prueba automática: 30 minutos simulados con ±200 ppm de deriva y bloques distintos, sin cortes ni clics. **Falta** la prueba con dos aparatos reales. |
+| Spike 3: visuales en el monitor 2 | Hecho: ventana aparte (navegador y escritorio), "Abrir en pantalla 2", 8 escenas y modo seguro medido. **Falta medir** 60 fps en gráficos integrados. |
+| Spike 4: grabar el micrófono | Grabar tomas y usarlas en pads: hecho. Alinear la toma con el beat (compensar latencia de entrada) pasa a la Fase 2 con el módulo Voz. |
+| Sistema de diseño v1 en código | Hecho: tokens de `DESIGN.md`, tipografías empaquetadas, pad, tecla de paso, perilla, fader, medidor, bocina, marquesina, pictogramas e íconos propios. La página de catálogo (Storybook o Ladle) queda pendiente. |
+| Prototipo navegable | Reemplazado por la app real. |
+| Repositorio, CI, licencias | Hecho: CI con formato, clippy, pruebas, pruebas en navegador, revisión de licencias (`cargo-deny` y npm) e instaladores de los tres sistemas. |
+
+### Fase 1
+
+| Entregable | Estado |
+|---|---|
+| Motor: transporte, tempo, swing, 16/32/64 pasos, metrónomo | Hecho. |
+| Máquina, Ácido, 808, Analógico, Sampler básico | Hecho. |
+| Teclado musical: Pads, Piano, Escala | Hecho (16 pads de pistas + 16 notas en escala = 32 teclas). **Soundboard** pendiente. |
+| Mezclador, bombeo en un clic, efectos esenciales, master | Hecho: dos envíos (espacio y eco), filtro de DJ, EQ de 3 bandas, saturación, compresor de pegamento, limitador y destino de volumen. |
+| Plantillas: tech house, techno, house, reggaetón, lo-fi | Hecho. |
+| Inicio, Patrón, Modo Fácil/Pro, 3 retos | Hecho, y además la pestaña Mezcla. |
+| Guardar, abrir, autoguardado, deshacer | Hecho (archivo `.house` con el audio adentro). |
+| Exportar WAV y MP3 | WAV hecho (16 y 24 bits, más rápido que tiempo real). **MP3 pendiente**: el codificador libre (LAME) es LGPL y solo puede ir enlazado dinámicamente o como programa aparte. |
+| Salida por un dispositivo con buses | Hecho, y en escritorio también en dos aparatos. |
+
+**Adelantado de otras fases** porque las plantillas lo necesitaban o porque
+cambiarlo después sería rehacer el motor: marquesina con secciones y modo
+Canción (F2), ventana de visuales con piloto automático (F3), dos salidas con
+compensación de deriva (F4) y grabar voz a un pad (F2).
+
+**Criterios de salida pendientes**: la prueba con 5 a 10 personas (primer beat
+en menos de 10 minutos) y una hora sin cortes con 12 pistas en una laptop de
+gama media.
+

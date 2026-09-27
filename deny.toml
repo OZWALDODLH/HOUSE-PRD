@@ -1,0 +1,39 @@
+# Política de licencias de HOUSE (CLAUDE.md): solo MIT, Apache-2.0, BSD, ISC,
+# Zlib, MPL-2.0 y OFL. LGPL solo enlazada dinámicamente o como programa aparte;
+# GPL y AGPL no, salvo decisión explícita. `cargo deny check` la aplica en CI.
+#
+# Unicode-3.0 aparece en crates básicos (unicode-ident, las tablas de ICU que usa
+# Tauri para URLs). Es una licencia permisiva de datos de Unicode y se aceptó a
+# propósito (ver docs/05-arquitectura.md, 5.10).
+
+[graph]
+all-features = false
+
+[licenses]
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Zlib",
+  "MPL-2.0",
+  "Unicode-3.0",
+]
+confidence-threshold = 0.9
+# Allowed on purpose even if no current dependency uses them (e.g. ISC).
+unused-allowed-license = "allow"
+
+[licenses.private]
+# Los crates de este repositorio no se publican; su licencia la decides tú.
+ignore = true
+
+[bans]
+multiple-versions = "allow"
+wildcards = "deny"
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

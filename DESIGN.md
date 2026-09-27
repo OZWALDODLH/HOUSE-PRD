@@ -77,6 +77,21 @@ Tintas extra solo para que la persona coloree pistas a mano: `lila #B69CFF`,
    de 2 px; la sección actual va en `amarillo`, sus focos en `amarillo` con
    contorno negro, y el cabezal es una línea `rosa`.
 
+### 2.4 Tonos de controles
+
+Matices del chasis para piezas de los controles. No son tintas nuevas ni
+significan nada por sí mismos.
+
+| Token | Hex | Uso |
+|---|---|---|
+| `paso` | `#3B3631` | Tecla de paso apagada, grupos 1 y 3 del compás. |
+| `paso-b` | `#2F2B27` | Tecla de paso apagada, grupos 2 y 4: el matiz de serigrafía que separa los tiempos. También los puntos apagados del ritmo en Inicio. |
+| `led-apagado` | `#3A3531` | Segmento de medidor apagado, riel de fader, interruptor apagado. |
+| `rollo` · `rollo-b` | `#1F1C1A` · `#221F1C` | Rayado del mini piano roll. |
+| `rollo-linea` | `#2E2A26` | División de tiempos en el mini piano roll. |
+| `foco-apagado` | `#CFC5B5` | Foco apagado de la marquesina. |
+| `papel-tinta-2` | `#5A524A` | Texto secundario sobre `papel` (6.6:1) y sobre `amarillo` (5.0:1). |
+
 ## 3. Tipografía
 
 | Rol | Familia | Pesos | Notas |

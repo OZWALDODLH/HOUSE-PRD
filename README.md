@@ -8,11 +8,75 @@ un segundo monitor. Está pensada para que alguien que nunca ha hecho música
 tenga su primer beat sonando en cinco minutos, sin quedarse corta cuando ya
 sepa lo que hace.
 
-Este repositorio contiene **el plan completo**: visión, investigación,
-funciones, diseño de interfaz, arquitectura, hoja de ruta e ideas, además de
-los bocetos de las pantallas principales.
+Este repositorio contiene **el plan completo** (visión, investigación,
+funciones, diseño, arquitectura, hoja de ruta e ideas) y **la app funcionando**:
+el motor de audio en Rust, la interfaz en React y la app de escritorio con
+Tauri. El estado exacto está en
+[6.9 Estado](docs/06-hoja-de-ruta.md#69-estado-septiembre-de-2026).
 
-![Estudio: la pantalla principal](diseno/capturas/estudio.png)
+![Estudio: la pantalla principal](diseno/capturas/app-estudio.png)
+
+## Pruébala
+
+- **En el navegador** (Chrome o Edge recomendados): cada build de CI deja el
+  archivo `house-demo-web` (un solo `index.html`) en los artefactos de GitHub
+  Actions. Ábrelo, elige un estilo y presiona Espacio. En el navegador suena
+  por una sola salida; la bocina y los audífonos por separado necesitan la app
+  de escritorio.
+- **App de escritorio**: los instaladores de Windows, macOS y Linux salen en
+  los artefactos `house-Windows`, `house-macOS` y `house-Linux` del mismo
+  flujo. Todavía no están firmados: tu sistema te va a pedir confirmación la
+  primera vez.
+
+## Cómo se usa
+
+1. En **Inicio** elige un camino (hacer un beat, grabar tu voz, tocar pads o
+   aprender con retos) y un estilo. Con el botón redondo escuchas cada estilo.
+2. **Espacio** reproduce o para. Las teclas `1 2 3 4`, `Q W E R`, `A S D F`,
+   `Z X C V` tocan tus pistas; `7` a `-` tocan notas del bajo o sinte elegido,
+   siempre en la escala. **Tab** prende o apaga el teclado musical.
+3. Haz clic en los pasos para prender o apagar golpes (arrastra para pintar
+   varios). En el bajo y los acordes, arrastra una nota hacia arriba o abajo
+   para cambiarla: nunca se sale de la tonalidad.
+4. Cambia de **Loop** a **Canción** y haz clic en una sección de la
+   marquesina para ir directo ahí; la palomita de cada pista dice si suena en
+   esa sección.
+5. **Exportar** crea un WAV de la canción o de un loop. **Visuales** (F6) abre
+   la ventana para el segundo monitor.
+6. Todo se guarda solo. **Ctrl+Z** deshace.
+
+## Cómo se compila
+
+Necesitas Rust (estable, con el target `wasm32-unknown-unknown`) y Node 22.
+
+```bash
+# Motor de audio: pruebas y versión WebAssembly para la interfaz
+cargo test --workspace --release
+bash scripts/build-wasm.sh
+
+# Interfaz en el navegador (http://localhost:5173)
+npm --prefix app install
+npm --prefix app run dev
+
+# App de escritorio (en Linux instala antes las dependencias de Tauri 2)
+npm install
+npm run desktop          # desarrollo
+npm run desktop:build    # instalador
+
+# Pruebas de la interfaz en un navegador real
+npm --prefix app run build
+npm --prefix app run test:e2e
+
+# Demo en un solo archivo HTML (app/dist-demo/index.html)
+npm --prefix app run build:demo
+```
+
+| Carpeta | Qué hay |
+|---|---|
+| `crates/house-engine` | Motor de audio en Rust: batería sintetizada, Ácido, 808, Analógico, Sampler, secuenciador, secciones, efectos y master. El mismo código corre como WebAssembly y nativo. |
+| `app/` | Interfaz en React 19 + TypeScript: Inicio, Estudio (Patrón y Mezcla), Visuales, diálogos, pruebas de punta a punta. |
+| `src-tauri/` | App de escritorio: ventanas, audio nativo con `cpal`, dos salidas con compensación de deriva, guardar archivos. |
+| `scripts/` | Compilar el motor a WebAssembly y revisar licencias de npm. |
 
 ## El plan
 
@@ -66,9 +130,10 @@ Detalle de cada pantalla en [`diseno/README.md`](diseno/README.md).
 
 ## Siguientes pasos
 
-1. Revisar el plan y los bocetos; decidir lo que está en
+1. Decidir lo que está en
    [6.7 Decisiones que te tocan a ti](docs/06-hoja-de-ruta.md#67-decisiones-que-te-tocan-a-ti)
-   (nombre, plataforma, código abierto o cerrado, tu equipo de audio).
-2. Arrancar la **Fase 0**: las cuatro pruebas técnicas (tecla › sonido en
-   menos de 10 ms, dos salidas sincronizadas, visuales en el monitor 2, voz
-   alineada) y el catálogo de componentes del sistema de diseño.
+   (nombre, plataforma, código abierto o cerrado, tu equipo de audio). La
+   licencia del código queda sin elegir hasta entonces.
+2. Medir en equipo real lo que el contenedor no puede: latencia tecla ›
+   sonido, dos salidas durante 30 minutos y 60 fps en el monitor 2.
+3. Probar la Fase 1 con 5 a 10 personas que nunca han hecho música.

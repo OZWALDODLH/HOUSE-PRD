@@ -331,3 +331,50 @@ docs/                    este plan
 - Instaladores firmados: Windows con firma de código; macOS notarizado.
 - Actualizaciones automáticas con canal estable y beta.
 - La app pesa poco (decenas de MB); los sonidos se descargan por paquetes.
+
+## 5.14 Lo que ya está construido (septiembre de 2026)
+
+Lo implementado sigue la decisión de 5.1 (Tauri 2 + motor en Rust con `cpal`
++ React/TypeScript + visuales WebGL2 en ventana aparte). Estas son las
+diferencias con el plan de arriba y por qué:
+
+- **Un motor, dos anfitriones.** `crates/house-engine` no tiene dependencias.
+  Compilado a WebAssembly corre dentro de un AudioWorklet (la versión de
+  navegador y la demo); compilado nativo corre dentro del callback de `cpal`
+  en la app de escritorio. Los dos reciben el mismo protocolo de comandos
+  numéricos (`[código, ...argumentos]`, ver `command.rs`) y devuelven el mismo
+  arreglo de estado (paso, sección, golpes, niveles, 16 bandas). La
+  exportación a WAV usa el mismo motor en un Worker, así que lo que exportas
+  es exactamente lo que oyes.
+- **El documento vive en TypeScript en la Fase 1** (no en Rust, como dice
+  5.7). La interfaz guarda el proyecto en un store inmutable, calcula las
+  diferencias y manda solo los comandos que cambiaron; deshacer son
+  instantáneas del documento. Así la misma interfaz sirve en navegador y en
+  escritorio. El documento pasa a Rust cuando la Cabina DJ (F4) necesite
+  renders y análisis sin la interfaz abierta.
+- **Un solo crate de motor** en lugar de `house-dsp`, `house-instruments`,
+  etc. Se separa cuando crezca.
+- **Archivos**: autoguardado en el almacenamiento de la app (localStorage para
+  el documento, IndexedDB para el audio) y un archivo `.house` (JSON con el
+  audio dentro) para mover proyectos. La carpeta `.house/` y la biblioteca en
+  SQLite de 5.8 llegan con la Fase 2.
+- **Dos salidas**: como en 5.4, con colas `rtrb` y un controlador PI que
+  mantiene la cola de la pre-escucha a media carga; el remuestreo es lineal
+  por ahora (`rubato` cuando haga falta más calidad).
+- **Modo seguro de Visuales**: en lugar de medir un solo punto (1×1), mide
+  la luminancia lineal exacta de una rejilla de 4×4 regiones con una imagen
+  de 256×256 y su cadena de mipmaps. Lo que no parpadea no se toca; lo que
+  pulsa (3 cambios de 0.09 o más en 2 s) se suaviza a 0.6 por segundo, y hay
+  un tope duro de 2 destellos por segundo por región. La imagen final se
+  vuelve a medir antes de mostrarse. Las pruebas de punta a punta lo miden en
+  los píxeles de la pantalla con estrobos de 2 a 30 Hz y con las 8 escenas.
+- **Web**: Chromium no deja pasar un `WebAssembly.Module` compilado a un
+  AudioWorklet, así que se mandan los bytes y el worklet compila.
+- **Licencias**: `cargo-deny` (`deny.toml`) y `scripts/check-licenses.mjs`
+  corren en CI. Se aceptó **Unicode-3.0** (tablas de Unicode en crates básicos
+  de Rust y de Tauri): es permisiva y no se puede evitar. La licencia del
+  código de HOUSE queda sin elegir (decisión 6.7.3).
+- **Pruebas**: 14 del motor (incluye renders completos), 3 de la app de
+  escritorio (incluye 30 minutos de deriva) y 8 de punta a punta en Chromium
+  (audio, modo Canción, deshacer, exportar, ventana de visuales, modo seguro).
+

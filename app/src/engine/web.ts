@@ -3,6 +3,7 @@ import workletSource from './worklet.js?raw';
 import wasmUrl from './house_engine.wasm?url';
 import type { Cmd } from './protocol';
 import { looksBluetooth, type EngineBridge, type OutputDevice, type OutputRouting } from './bridge';
+import { addWorkletModule } from './modules';
 
 type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> };
 
@@ -19,9 +20,7 @@ export class WebBridge implements EngineBridge {
     // Resume right away, while the click or key press still counts: the
     // worklet only answers once the audio thread runs.
     void ctx.resume().catch(() => undefined);
-    const url = URL.createObjectURL(new Blob([workletSource], { type: 'text/javascript' }));
-    await ctx.audioWorklet.addModule(url);
-    URL.revokeObjectURL(url);
+    await addWorkletModule(ctx, workletSource);
     const bytes = await (await fetch(wasmUrl)).arrayBuffer();
     const node = new AudioWorkletNode(ctx, 'house-engine', {
       numberOfInputs: 0,

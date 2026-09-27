@@ -4,6 +4,7 @@ import workerSource from './render-worker.js?raw';
 import wasmUrl from './house_engine.wasm?url';
 import { MASTER, SECTION_KIND, cmd, type Cmd } from './protocol';
 import { projectCmds, sectionCmds } from './sync';
+import { makeWorker } from './modules';
 import { allSamples } from '../state/samples';
 import { barsToSeconds, patternBars, songBars } from '../state/store';
 import type { Project } from '../state/model';
@@ -59,9 +60,7 @@ export async function renderProject(p: Project, o: RenderOptions): Promise<Rende
   const bars = renderBars(p, o);
   const frames = Math.ceil((barsToSeconds(bars + TAIL_BARS, p.bpm) * sampleRate) / 128) * 128;
   const bytes = await engineBytes();
-  const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
-  const worker = new Worker(url);
-  URL.revokeObjectURL(url);
+  const worker = makeWorker(workerSource);
   const samples = [...allSamples()].map(([slot, s]) => ({ slot, sr: s.sr, data: s.data }));
   const cmds = renderCmds(p, o);
   try {

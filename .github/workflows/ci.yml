@@ -1,0 +1,142 @@
+name: CI
+
+on:
+  push:
+    branches: [main, 'claude/**']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  motor:
+    name: Motor de audio
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Dependencias de Linux (Tauri y ALSA)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev libxdo-dev
+      - name: Formato
+        run: cargo fmt --all -- --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Pruebas (motor, deriva de 30 minutos, app de escritorio)
+        run: cargo test --workspace --release
+      - name: Motor en WebAssembly
+        run: bash scripts/build-wasm.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: motor-wasm
+          path: app/src/engine/house_engine.wasm
+
+  licencias:
+    name: Licencias
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check licenses bans sources
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci --prefix app
+      - name: Licencias de npm que viajan dentro de la app
+        run: node scripts/check-licenses.mjs
+
+  interfaz:
+    name: Interfaz y pruebas en navegador
+    needs: motor
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: motor-wasm
+          path: app/src/engine
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - name: Tipos
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Chromium para las pruebas
+        run: npx playwright install --with-deps chromium
+      - name: Pruebas de punta a punta (audio, exportar, visuales, modo seguro)
+        run: npm run test:e2e
+      - name: Demo en un solo archivo
+        run: npm run build:demo
+      - uses: actions/upload-artifact@v4
+        with:
+          name: house-demo-web
+          path: app/dist-demo/index.html
+
+  escritorio:
+    name: App de escritorio (${{ matrix.nombre }})
+    needs: motor
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            nombre: Windows
+          - os: macos-latest
+            nombre: macOS
+          - os: ubuntu-22.04
+            nombre: Linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: motor-wasm
+          path: app/src/engine
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Dependencias de Linux
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libasound2-dev libxdo-dev patchelf
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            app/package-lock.json
+      - run: npm ci
+      - run: npm ci --prefix app
+      - name: Compilar e instaladores
+        run: npm run desktop:build -- --ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: house-${{ matrix.nombre }}
+          path: |
+            target/release/bundle/**/*.msi
+            target/release/bundle/**/*.exe
+            target/release/bundle/**/*.dmg
+            target/release/bundle/**/*.deb
+            target/release/bundle/**/*.AppImage
+          if-no-files-found: warn
