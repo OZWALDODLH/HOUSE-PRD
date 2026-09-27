@@ -65,10 +65,8 @@ fn engine_load_sample(state: State<'_, AudioState>, request: Request<'_>) -> Res
     };
     let slot: usize = header(&request, "slot")?;
     let sr: f32 = header(&request, "sample-rate")?;
-    let data: Box<[f32]> = bytes
-        .chunks_exact(4)
-        .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
-        .collect();
+    let (words, _) = bytes.as_chunks::<4>();
+    let data: Box<[f32]> = words.iter().map(|w| f32::from_le_bytes(*w)).collect();
     let mut running = lock(&state.running);
     let r = running.as_mut().ok_or("El audio todavía no arranca.")?;
     r.send(Msg::Sample { slot, data, sr })
