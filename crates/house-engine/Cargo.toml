@@ -1,0 +1,11 @@
+[package]
+name = "house-engine"
+version = "0.1.0"
+edition = "2021"
+description = "Motor de audio de HOUSE: batería sintetizada, sintes, sampler, efectos y secuenciador. Sin memoria nueva ni candados dentro de process()."
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]

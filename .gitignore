@@ -1,0 +1,11 @@
+# Rust
+/target/
+# App
+/app/node_modules/
+/app/dist/
+/app/dist-demo/
+# Tauri
+/src-tauri/gen/
+# Misc
+*.log
+.DS_Store

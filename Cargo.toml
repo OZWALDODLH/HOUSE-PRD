@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/house-engine"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+# The WebAssembly build is small and fast with these; the desktop app inherits them.
+[profile.release.package.house-engine]
+opt-level = 3
