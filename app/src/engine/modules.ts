@@ -25,3 +25,29 @@ export function makeWorker(source: string): Worker {
     setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
 }
+
+/** Bytes of a bundled file. Inline data: URLs are decoded here, without fetch. */
+export async function loadBytes(url: string): Promise<ArrayBuffer> {
+  if (url.startsWith('data:')) {
+    const comma = url.indexOf(',');
+    const meta = url.slice(5, comma);
+    const body = url.slice(comma + 1);
+    if (meta.endsWith(';base64')) {
+      const bin = atob(body);
+      const out = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+      return out.buffer;
+    }
+    return new TextEncoder().encode(decodeURIComponent(body)).buffer as ArrayBuffer;
+  }
+  return (await fetch(url)).arrayBuffer();
+}
+
+/** Inside another page (an embedded preview), downloads can be blocked. */
+export const isEmbedded = (): boolean => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+};

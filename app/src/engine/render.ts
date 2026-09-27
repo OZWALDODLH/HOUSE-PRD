@@ -4,7 +4,7 @@ import workerSource from './render-worker.js?raw';
 import wasmUrl from './house_engine.wasm?url';
 import { MASTER, SECTION_KIND, cmd, type Cmd } from './protocol';
 import { projectCmds, sectionCmds } from './sync';
-import { makeWorker } from './modules';
+import { loadBytes, makeWorker } from './modules';
 import { allSamples } from '../state/samples';
 import { barsToSeconds, patternBars, songBars } from '../state/store';
 import type { Project } from '../state/model';
@@ -27,7 +27,7 @@ let fetched: Promise<ArrayBuffer> | null = null;
 
 function engineBytes(): Promise<ArrayBuffer> {
   if (!fetched) {
-    fetched = fetch(wasmUrl).then((r) => r.arrayBuffer());
+    fetched = loadBytes(wasmUrl);
     fetched.catch(() => (fetched = null));
   }
   return fetched;

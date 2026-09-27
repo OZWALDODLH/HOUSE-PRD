@@ -3,7 +3,7 @@ import workletSource from './worklet.js?raw';
 import wasmUrl from './house_engine.wasm?url';
 import type { Cmd } from './protocol';
 import { looksBluetooth, type EngineBridge, type OutputDevice, type OutputRouting } from './bridge';
-import { addWorkletModule } from './modules';
+import { addWorkletModule, loadBytes } from './modules';
 
 type SinkContext = AudioContext & { setSinkId?: (id: string) => Promise<void> };
 
@@ -21,7 +21,7 @@ export class WebBridge implements EngineBridge {
     // worklet only answers once the audio thread runs.
     void ctx.resume().catch(() => undefined);
     await addWorkletModule(ctx, workletSource);
-    const bytes = await (await fetch(wasmUrl)).arrayBuffer();
+    const bytes = await loadBytes(wasmUrl);
     const node = new AudioWorkletNode(ctx, 'house-engine', {
       numberOfInputs: 0,
       numberOfOutputs: 1,

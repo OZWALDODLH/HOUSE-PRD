@@ -5,7 +5,6 @@ import { useUi } from './ui';
 import { allSamples, deleteSamplesOf, loadSamplesFor, putSample } from './samples';
 import type { GenreId, Project } from './model';
 import type { SectionKind } from '../engine/protocol';
-import { isTauri } from '../engine/bridge';
 
 const K = {
   index: 'house.v1.proyectos',
@@ -166,24 +165,6 @@ export async function openProjectFile(file: File): Promise<string | null> {
   for (const s of parsed.samples ?? []) await putSample(p.id, s.slot, { sr: s.sr, name: s.name, data: fromBase64(s.data) });
   saveProject(useStudio.getState().project);
   return null;
-}
-
-/** Saves a file: a save dialog in the desktop app, a download in the browser. */
-export async function download(blob: Blob, name: string): Promise<void> {
-  if (isTauri()) {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    await invoke('save_file', bytes, { headers: { 'file-name': encodeURIComponent(name) } });
-    return;
-  }
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 4000);
 }
 
 export const safeFileName = (name: string): string =>

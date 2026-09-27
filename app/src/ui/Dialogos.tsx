@@ -8,7 +8,8 @@ import { Mic, listInputs, micError, type Input } from '../engine/mic';
 import { addSamplerTrack, barsToSeconds, formatDuration, patternBars, rename, songBars, useStudio } from '../state/store';
 import { closeDialog, toast, useUi } from '../state/ui';
 import { decodeFile, freeSlot, prepareAudio, putSample } from '../state/samples';
-import { deleteProject, download, listProjects, openProjectFile, openSaved, projectFile, safeFileName, saveNow } from '../state/persist';
+import { deleteProject, listProjects, openProjectFile, openSaved, projectFile, safeFileName, saveNow } from '../state/persist';
+import { canSaveFiles, saveFile, viewerDownloads } from '../state/files';
 import { genreById } from '../state/templates';
 import { markExported } from '../state/retos';
 import { Icon } from './Icon';
@@ -35,6 +36,14 @@ export function Dialogo({ title, children, wide }: { title: string; children: Re
       </div>
     </div>
   );
+}
+
+/** The project as a file (.house; .house.json where only JSON can be saved). */
+async function saveProjectFile(p: Parameters<typeof projectFile>[0]): Promise<void> {
+  const inViewer = !!(await viewerDownloads());
+  const res = await saveFile(projectFile(p), `${safeFileName(p.name)}${inViewer ? '.house.json' : '.house'}`);
+  if (res === 'saved') toast('Proyecto guardado en un archivo.', 'bien');
+  else if (res === 'unavailable') toast('Esta vista no deja guardar archivos. Usa la app de escritorio de HOUSE.', 'error', 6000);
 }
 
 export function Dialogos() {
@@ -162,6 +171,12 @@ function Exportar() {
   const [done, setDone] = useState<string | null>(null);
   const bars = renderBars(p, { what, loopBars });
   const secs = barsToSeconds(bars, p.bpm);
+  const [blocked, setBlocked] = useState(false);
+  const [inViewer, setInViewer] = useState(false);
+  useEffect(() => {
+    void canSaveFiles().then((ok) => setBlocked(!ok));
+    void viewerDownloads().then((d) => setInViewer(!!d));
+  }, []);
 
   const go = async () => {
     setProgress(0);
@@ -170,11 +185,17 @@ function Exportar() {
       const r = await renderProject(p, { what, loopBars, onProgress: setProgress });
       const m = measure(r);
       const name = `${safeFileName(p.name)}${what === 'loop' ? '-loop' : ''}.wav`;
-      await download(encodeWav(r, bits), name);
+      const res = await saveFile(encodeWav(r, bits), name);
       const label = what === 'cancion' ? 'Canción exportada' : 'Loop exportado';
-      setDone(`${label}: ${name}. Pico ${m.peakDb.toFixed(1)} dB, volumen promedio ${m.rmsDb.toFixed(1)} dB.`);
-      toast(`${label}.`, 'bien');
-      markExported();
+      if (res === 'saved') {
+        setDone(`${label}: ${inViewer ? name.replace(/\.wav$/, '.zip') : name}. Pico ${m.peakDb.toFixed(1)} dB, volumen promedio ${m.rmsDb.toFixed(1)} dB.`);
+        toast(`${label}.`, 'bien');
+        markExported();
+      } else if (res === 'declined') {
+        toast('No se guardó el archivo.', 'info');
+      } else {
+        toast('Esta vista no deja guardar archivos. Usa la app de escritorio de HOUSE.', 'error', 6000);
+      }
     } catch (e) {
       console.error(e);
       toast('No pude exportar. Vuelve a intentar; si sigue fallando, guarda el proyecto y reinicia la app.', 'error', 6000);
@@ -227,12 +248,18 @@ function Exportar() {
         </div>
       )}
       {done && <div className="aviso" style={{ background: 'var(--verde)' }}>{done}</div>}
+      {blocked && (
+        <div className="aviso" role="status">
+          En esta vista no se pueden bajar archivos. Para exportar tu canción usa la app de escritorio de HOUSE.
+        </div>
+      )}
+      {inViewer && !blocked && <p>Aquí el WAV llega dentro de un archivo .zip; ábrelo y ahí está tu canción.</p>}
       <div className="acciones">
-        <button className="btn" onClick={() => void download(projectFile(p), `${safeFileName(p.name)}.house`)}>
+        <button className="btn" disabled={blocked} onClick={() => void saveProjectFile(p)}>
           <Icon name="guardar" size={16} />
           Guardar proyecto (.house)
         </button>
-        <button className="btn rosa" onClick={go} disabled={progress !== null}>
+        <button className="btn rosa" onClick={go} disabled={progress !== null || blocked}>
           <Icon name="exportar" size={16} />
           {progress !== null ? `Exportando ${Math.round(progress * 100)}%` : what === 'cancion' ? `Exportar canción (${formatDuration(secs)})` : `Exportar loop (${formatDuration(secs)})`}
         </button>
@@ -448,6 +475,7 @@ function Proyectos() {
   const p = useStudio((s) => s.project);
   const set = useUi((s) => s.set);
   const [list, setList] = useState(() => listProjects());
+  const [confirming, setConfirming] = useState<string | null>(null);
   const file = useRef<HTMLInputElement>(null);
   return (
     <Dialogo title="Tus proyectos" wide>
@@ -470,14 +498,14 @@ function Proyectos() {
           <Icon name="carpeta" size={16} />
           Abrir archivo
         </button>
-        <button className="btn" onClick={() => void download(projectFile(p), `${safeFileName(p.name)}.house`)}>
+        <button className="btn" onClick={() => void saveProjectFile(p)}>
           <Icon name="guardar" size={16} />
           Guardar archivo
         </button>
         <input
           ref={file}
           type="file"
-          accept=".house,application/json"
+          accept=".house,.json,application/json"
           hidden
           onChange={async (e) => {
             const f = e.target.files?.[0];
@@ -513,20 +541,26 @@ function Proyectos() {
               >
                 {m.id === p.id ? 'Abierto' : 'Abrir'}
               </button>
-              {m.id !== p.id && (
-                <button
-                  className="btn chico icono"
-                  aria-label={`Borrar ${m.name}`}
-                  title="Borrar proyecto"
-                  onClick={() => {
-                    if (!confirm(`¿Borrar “${m.name}”? No se puede deshacer.`)) return;
-                    deleteProject(m.id);
-                    setList(listProjects());
-                  }}
-                >
-                  <Icon name="basura" size={14} />
-                </button>
-              )}
+              {m.id !== p.id &&
+                (confirming === m.id ? (
+                  <button
+                    className="btn chico rosa"
+                    onClick={() => {
+                      deleteProject(m.id);
+                      setConfirming(null);
+                      setList(listProjects());
+                      toast(`Borraste ${m.name}.`, 'info');
+                    }}
+                    onBlur={() => setConfirming(null)}
+                    autoFocus
+                  >
+                    Sí, borrar
+                  </button>
+                ) : (
+                  <button className="btn chico icono" aria-label={`Borrar ${m.name}`} title="Borrar proyecto (no se puede deshacer)" onClick={() => setConfirming(m.id)}>
+                    <Icon name="basura" size={14} />
+                  </button>
+                ))}
             </div>
           </div>
         ))}
