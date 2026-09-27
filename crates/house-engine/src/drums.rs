@@ -230,7 +230,8 @@ impl DrumVoice {
                 let pe = self.pitch.next();
                 let f = self.fa * (1.0 + 0.25 * pe);
                 let te = self.env2.next();
-                let tone = (self.osc[0].sine(f, sr) * 0.6 + self.osc[1].sine(f * 1.78, sr) * 0.3) * te;
+                let tone =
+                    (self.osc[0].sine(f, sr) * 0.6 + self.osc[1].sine(f * 1.78, sr) * 0.3) * te;
                 let n = self.f2.lp(self.f1.hp(self.rng.noise()));
                 let noise = n * self.amp.next();
                 soft_clip((tone + noise * 0.95) * (1.0 + self.drive)) * 0.8
@@ -265,17 +266,24 @@ impl DrumVoice {
             DrumModel::Conga => {
                 let pe = self.pitch.next();
                 let f = self.fa * (1.0 + 0.2 * pe);
-                let body = (self.osc[0].sine(f, sr) + self.osc[1].triangle(f * 1.5, sr) * 0.12 * self.drive) * self.amp.next();
+                let body = (self.osc[0].sine(f, sr)
+                    + self.osc[1].triangle(f * 1.5, sr) * 0.12 * self.drive)
+                    * self.amp.next();
                 let slap = self.f1.hp(self.rng.noise()) * self.env2.next() * 0.3;
                 soft_clip(body + slap) * 0.85
             }
             DrumModel::Shaker => {
-                let a = if self.t < self.fa { self.t / self.fa } else { 1.0 };
+                let a = if self.t < self.fa {
+                    self.t / self.fa
+                } else {
+                    1.0
+                };
                 let e = if self.t < self.fa { a } else { self.amp.next() };
                 self.f1.hp(self.rng.noise()) * e * 0.55
             }
             DrumModel::Cowbell => {
-                let s = self.osc[0].square(540.0 * self.fa, sr, 0.5) + self.osc[1].square(800.0 * self.fa, sr, 0.5);
+                let s = self.osc[0].square(540.0 * self.fa, sr, 0.5)
+                    + self.osc[1].square(800.0 * self.fa, sr, 0.5);
                 let e = self.env2.next() * 0.6 + self.amp.next() * 0.5;
                 soft_clip(self.f1.bp(s) * e * (1.2 + self.drive)) * 0.6
             }
@@ -288,8 +296,9 @@ impl DrumVoice {
             }
             DrumModel::Riser => {
                 let prog = (self.t / self.len).min(1.0);
-                if self.cr % 16 == 0 {
-                    self.f1.set_q(exp_map(prog, 250.0, 9000.0), 2.0 + self.fa * 3.0, sr);
+                if self.cr.is_multiple_of(16) {
+                    self.f1
+                        .set_q(exp_map(prog, 250.0, 9000.0), 2.0 + self.fa * 3.0, sr);
                 }
                 self.cr = self.cr.wrapping_add(1);
                 let n = self.f1.bp(self.rng.noise()) * 2.0;

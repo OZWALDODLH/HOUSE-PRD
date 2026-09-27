@@ -13,7 +13,10 @@ struct DelayLine {
 
 impl DelayLine {
     fn new(len: usize) -> Self {
-        DelayLine { buf: vec![0.0; len.max(4)].into_boxed_slice(), pos: 0 }
+        DelayLine {
+            buf: vec![0.0; len.max(4)].into_boxed_slice(),
+            pos: 0,
+        }
     }
     #[inline]
     fn read(&self, delay: usize) -> f32 {
@@ -45,7 +48,11 @@ struct Allpass {
 
 impl Allpass {
     fn new(len: usize, g: f32) -> Self {
-        Allpass { line: DelayLine::new(len + 1), len, g }
+        Allpass {
+            line: DelayLine::new(len + 1),
+            len,
+            g,
+        }
     }
     #[inline]
     fn process(&mut self, x: f32) -> f32 {
@@ -59,7 +66,9 @@ impl Allpass {
 // ---------------------------------------------------------------- Reverb ---
 
 const FDN: usize = 8;
-const FDN_LENS: [f32; FDN] = [0.0297, 0.0371, 0.0411, 0.0437, 0.0533, 0.0613, 0.0677, 0.0743];
+const FDN_LENS: [f32; FDN] = [
+    0.0297, 0.0371, 0.0411, 0.0437, 0.0533, 0.0613, 0.0677, 0.0743,
+];
 
 /// 8-line feedback delay network with diffusion and damping.
 pub struct Reverb {
@@ -91,7 +100,16 @@ impl Reverb {
         ];
         let mut hp = OnePole::default();
         hp.set_hz(180.0, sr);
-        let mut r = Reverb { lines, lens, damp, diff, pre: DelayLine::new((0.1 * sr) as usize), pre_len: (0.012 * sr) as usize, fb: 0.8, hp };
+        let mut r = Reverb {
+            lines,
+            lens,
+            damp,
+            diff,
+            pre: DelayLine::new((0.1 * sr) as usize),
+            pre_len: (0.012 * sr) as usize,
+            fb: 0.8,
+            hp,
+        };
         r.set(0.55, 0.5, sr);
         r
     }
@@ -179,7 +197,8 @@ impl PingPong {
     }
 
     pub fn set_time(&mut self, samples: f32) {
-        self.time.set(samples.clamp(64.0, (self.l.buf.len() - 4) as f32));
+        self.time
+            .set(samples.clamp(64.0, (self.l.buf.len() - 4) as f32));
     }
 
     #[inline]
@@ -211,7 +230,15 @@ pub struct Glue {
 
 impl Glue {
     pub fn new(sr: f32) -> Self {
-        let mut g = Glue { env: 0.0, att: tau_coef(0.01, sr), rel: tau_coef(0.15, sr), thresh_db: 0.0, ratio: 2.0, makeup: 1.0, gr_db: 0.0 };
+        let mut g = Glue {
+            env: 0.0,
+            att: tau_coef(0.01, sr),
+            rel: tau_coef(0.15, sr),
+            thresh_db: 0.0,
+            ratio: 2.0,
+            makeup: 1.0,
+            gr_db: 0.0,
+        };
         g.set_amount(0.3);
         g
     }
@@ -228,7 +255,11 @@ impl Glue {
         self.env = x + (self.env - x) * c;
         let lvl = gain_to_db(self.env);
         let over = lvl - self.thresh_db;
-        let gr = if over > 0.0 { over * (1.0 - 1.0 / self.ratio) } else { 0.0 };
+        let gr = if over > 0.0 {
+            over * (1.0 - 1.0 / self.ratio)
+        } else {
+            0.0
+        };
         self.gr_db = gr;
         let g = db_to_gain(-gr) * self.makeup;
         (l * g, r * g)
@@ -270,7 +301,11 @@ impl Limiter {
     #[inline]
     pub fn process(&mut self, l: f32, r: f32) -> (f32, f32) {
         let peak = l.abs().max(r.abs());
-        let target = if peak > self.ceiling { self.ceiling / peak } else { 1.0 };
+        let target = if peak > self.ceiling {
+            self.ceiling / peak
+        } else {
+            1.0
+        };
         self.targets[self.pos] = target;
         let mut min = 1.0f32;
         for &t in self.targets.iter() {

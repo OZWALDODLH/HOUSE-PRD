@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "HOUSE",
+  "version": "0.1.0",
+  "identifier": "mx.house.estudio",
+  "build": {
+    "frontendDist": "../app/dist",
+    "devUrl": "http://localhost:5173",
+    "beforeDevCommand": "npm --prefix app run dev",
+    "beforeBuildCommand": "npm --prefix app run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "HOUSE",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1100,
+        "minHeight": 640,
+        "backgroundColor": "#2A2724",
+        "dragDropEnabled": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: blob:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' ipc: http://ipc.localhost; media-src 'self' blob: mediastream:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "Music",
+    "shortDescription": "Crea, mezcla y proyecta música",
+    "longDescription": "HOUSE es un estudio para hacer tech house, techno, reggaetón y más, aunque no sepas música: pads con tu teclado, sintetizadores, grabación de voz, mezcla y visuales para un segundo monitor.",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

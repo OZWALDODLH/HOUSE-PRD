@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/house-engine"]
+members = ["crates/house-engine", "src-tauri"]
 
 [profile.release]
 opt-level = 3

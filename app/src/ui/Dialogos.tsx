@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { bridgeIfReady, looksBluetooth, type OutputDevice } from '../engine/bridge';
 import { MASTER, cmd } from '../engine/protocol';
-import { send, startAudio } from '../engine/audio';
+import { resync, send, startAudio } from '../engine/audio';
 import { encodeWav, measure, renderBars, renderProject } from '../engine/render';
 import { Mic, listInputs, micError, type Input } from '../engine/mic';
 import { addSamplerTrack, barsToSeconds, formatDuration, patternBars, rename, songBars, useStudio } from '../state/store';
@@ -75,7 +75,10 @@ function Salidas() {
     if (!br) return;
     const err = await br.setRouting(next);
     setError(err);
-    send([cmd.master(MASTER.CUE_TO_MASTER, next.cue && second ? 0 : 1)]);
+    const cueApart = !err && !!next.cue && second;
+    // The desktop engine restarts on new devices: give it the project again.
+    if (br.kind === 'native') resync(cueApart);
+    else send([cmd.master(MASTER.CUE_TO_MASTER, cueApart ? 0 : 1)]);
     setLatency(br.latencyMs());
     if (!err) toast('Salidas listas.', 'bien', 1800);
   };

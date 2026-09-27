@@ -105,7 +105,8 @@ pub extern "C" fn he_sample_commit(slot: u32, sample_rate: f32) {
         if PENDING.is_null() {
             return;
         }
-        let b: Box<[f32]> = Box::from_raw(core::ptr::slice_from_raw_parts_mut(PENDING, PENDING_LEN));
+        let b: Box<[f32]> =
+            Box::from_raw(core::ptr::slice_from_raw_parts_mut(PENDING, PENDING_LEN));
         PENDING = null_mut();
         PENDING_LEN = 0;
         if let Some(e) = eng() {
@@ -117,7 +118,10 @@ pub extern "C" fn he_sample_commit(slot: u32, sample_rate: f32) {
 
 unsafe fn free_pending() {
     if !PENDING.is_null() {
-        drop(Box::from_raw(core::ptr::slice_from_raw_parts_mut(PENDING, PENDING_LEN)));
+        drop(Box::from_raw(core::ptr::slice_from_raw_parts_mut(
+            PENDING,
+            PENDING_LEN,
+        )));
         PENDING = null_mut();
         PENDING_LEN = 0;
     }

@@ -10,23 +10,75 @@ pub enum Command {
     Stop,
     SetBpm(f32),
     SetSwing(f32),
-    SetStep { track: u8, step: u8, on: bool, vel: f32, len: u8, accent: bool, slide: bool, notes: [i8; 4] },
-    SetTrackKind { track: u8, kind: u8, model: u8 },
-    SetParam { track: u8, idx: u8, value: f32 },
-    SetMix { track: u8, param: u8, value: f32 },
-    NoteOn { track: u8, note: u8, vel: f32 },
-    NoteOff { track: u8, note: u8 },
-    SetLength { track: u8, steps: u8 },
+    SetStep {
+        track: u8,
+        step: u8,
+        on: bool,
+        vel: f32,
+        len: u8,
+        accent: bool,
+        slide: bool,
+        notes: [i8; 4],
+    },
+    SetTrackKind {
+        track: u8,
+        kind: u8,
+        model: u8,
+    },
+    SetParam {
+        track: u8,
+        idx: u8,
+        value: f32,
+    },
+    SetMix {
+        track: u8,
+        param: u8,
+        value: f32,
+    },
+    NoteOn {
+        track: u8,
+        note: u8,
+        vel: f32,
+    },
+    NoteOff {
+        track: u8,
+        note: u8,
+    },
+    SetLength {
+        track: u8,
+        steps: u8,
+    },
     SetMode(u8),
     SetSectionCount(u8),
-    SetSection { index: u8, bars: u8, mask: u32, kind: u8 },
-    SetMaster { param: u8, value: f32 },
+    SetSection {
+        index: u8,
+        bars: u8,
+        mask: u32,
+        kind: u8,
+    },
+    SetMaster {
+        param: u8,
+        value: f32,
+    },
     SetSidechainSource(u8),
-    Seek { bar: u32 },
+    Seek {
+        bar: u32,
+    },
     AllNotesOff,
-    Preview { kind: u8, model: u8, note: u8, vel: f32, params: [f32; 8] },
-    SetSampleSlot { track: u8, slot: u8 },
-    ClearSteps { track: u8 },
+    Preview {
+        kind: u8,
+        model: u8,
+        note: u8,
+        vel: f32,
+        params: [f32; 8],
+    },
+    SetSampleSlot {
+        track: u8,
+        slot: u8,
+    },
+    ClearSteps {
+        track: u8,
+    },
 }
 
 pub mod op {
@@ -138,12 +190,34 @@ pub fn decode(a: &[f64]) -> Option<Command> {
                 notes: [note_at(a, 8), note_at(a, 9), note_at(a, 10), note_at(a, 11)],
             }
         }
-        op::SET_TRACK_KIND => Command::SetTrackKind { track: u8_at(a, 1), kind: u8_at(a, 2), model: u8_at(a, 3) },
-        op::SET_PARAM => Command::SetParam { track: u8_at(a, 1), idx: u8_at(a, 2), value: f_at(a, 3) },
-        op::SET_MIX => Command::SetMix { track: u8_at(a, 1), param: u8_at(a, 2), value: f_at(a, 3) },
-        op::NOTE_ON => Command::NoteOn { track: u8_at(a, 1), note: u8_at(a, 2), vel: f_at(a, 3) },
-        op::NOTE_OFF => Command::NoteOff { track: u8_at(a, 1), note: u8_at(a, 2) },
-        op::SET_LENGTH => Command::SetLength { track: u8_at(a, 1), steps: u8_at(a, 2) },
+        op::SET_TRACK_KIND => Command::SetTrackKind {
+            track: u8_at(a, 1),
+            kind: u8_at(a, 2),
+            model: u8_at(a, 3),
+        },
+        op::SET_PARAM => Command::SetParam {
+            track: u8_at(a, 1),
+            idx: u8_at(a, 2),
+            value: f_at(a, 3),
+        },
+        op::SET_MIX => Command::SetMix {
+            track: u8_at(a, 1),
+            param: u8_at(a, 2),
+            value: f_at(a, 3),
+        },
+        op::NOTE_ON => Command::NoteOn {
+            track: u8_at(a, 1),
+            note: u8_at(a, 2),
+            vel: f_at(a, 3),
+        },
+        op::NOTE_OFF => Command::NoteOff {
+            track: u8_at(a, 1),
+            note: u8_at(a, 2),
+        },
+        op::SET_LENGTH => Command::SetLength {
+            track: u8_at(a, 1),
+            steps: u8_at(a, 2),
+        },
         op::SET_MODE => Command::SetMode(u8_at(a, 1)),
         op::SET_SECTION_COUNT => Command::SetSectionCount(u8_at(a, 1)),
         op::SET_SECTION => Command::SetSection {
@@ -152,9 +226,14 @@ pub fn decode(a: &[f64]) -> Option<Command> {
             mask: a.get(3).copied().unwrap_or(0.0).clamp(0.0, u32::MAX as f64) as u32,
             kind: u8_at(a, 4),
         },
-        op::SET_MASTER => Command::SetMaster { param: u8_at(a, 1), value: f_at(a, 2) },
+        op::SET_MASTER => Command::SetMaster {
+            param: u8_at(a, 1),
+            value: f_at(a, 2),
+        },
         op::SET_SIDECHAIN => Command::SetSidechainSource(u8_at(a, 1)),
-        op::SEEK => Command::Seek { bar: a.get(1).copied().unwrap_or(0.0).max(0.0) as u32 },
+        op::SEEK => Command::Seek {
+            bar: a.get(1).copied().unwrap_or(0.0).max(0.0) as u32,
+        },
         op::ALL_NOTES_OFF => Command::AllNotesOff,
         op::PREVIEW => {
             let mut params = [0.5f32; 8];
@@ -163,9 +242,18 @@ pub fn decode(a: &[f64]) -> Option<Command> {
                     *p = (*v as f32).clamp(0.0, 1.0);
                 }
             }
-            Command::Preview { kind: u8_at(a, 1), model: u8_at(a, 2), note: u8_at(a, 3), vel: f_at(a, 4), params }
+            Command::Preview {
+                kind: u8_at(a, 1),
+                model: u8_at(a, 2),
+                note: u8_at(a, 3),
+                vel: f_at(a, 4),
+                params,
+            }
         }
-        op::SET_SAMPLE_SLOT => Command::SetSampleSlot { track: u8_at(a, 1), slot: u8_at(a, 2) },
+        op::SET_SAMPLE_SLOT => Command::SetSampleSlot {
+            track: u8_at(a, 1),
+            slot: u8_at(a, 2),
+        },
         op::CLEAR_STEPS => Command::ClearSteps { track: u8_at(a, 1) },
         _ => return None,
     })
@@ -177,10 +265,22 @@ mod tests {
 
     #[test]
     fn decodes_step() {
-        let c = decode(&[5.0, 2.0, 7.0, 1.0, 0.8, 2.0, 1.0, 0.0, 57.0, -1.0, -1.0, -1.0]).unwrap();
+        let c = decode(&[
+            5.0, 2.0, 7.0, 1.0, 0.8, 2.0, 1.0, 0.0, 57.0, -1.0, -1.0, -1.0,
+        ])
+        .unwrap();
         assert_eq!(
             c,
-            Command::SetStep { track: 2, step: 7, on: true, vel: 0.8, len: 2, accent: true, slide: false, notes: [57, -1, -1, -1] }
+            Command::SetStep {
+                track: 2,
+                step: 7,
+                on: true,
+                vel: 0.8,
+                len: 2,
+                accent: true,
+                slide: false,
+                notes: [57, -1, -1, -1]
+            }
         );
     }
 

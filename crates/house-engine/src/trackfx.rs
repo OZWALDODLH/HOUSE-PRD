@@ -58,7 +58,11 @@ impl EqBand {
     }
 }
 
-const BANDS: [(Shape, f32, f32); 3] = [(Shape::LowShelf, 180.0, 0.7), (Shape::Bell, 1200.0, 0.8), (Shape::HighShelf, 5000.0, 0.7)];
+const BANDS: [(Shape, f32, f32); 3] = [
+    (Shape::LowShelf, 180.0, 0.7),
+    (Shape::Bell, 1200.0, 0.8),
+    (Shape::HighShelf, 5000.0, 0.7),
+];
 
 #[derive(Clone, Copy)]
 pub struct TrackFx {
@@ -215,6 +219,9 @@ mod tests {
         let mut fx = TrackFx::new(sr);
         fx.set_eq(0, -12.0);
         let untouched = tone_level(&mut fx, 8_000.0, sr);
-        assert!((untouched - 0.5).abs() < 0.03, "low shelf touched highs: {untouched}");
+        assert!(
+            (untouched - 0.5).abs() < 0.03,
+            "low shelf touched highs: {untouched}"
+        );
     }
 }

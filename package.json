@@ -1,0 +1,13 @@
+{
+  "name": "house",
+  "private": true,
+  "description": "HOUSE: app para crear, mezclar y proyectar música",
+  "scripts": {
+    "desktop": "tauri dev",
+    "desktop:build": "tauri build",
+    "icons": "tauri icon src-tauri/icons/app-icon-1024.png"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.0"
+  }
+}

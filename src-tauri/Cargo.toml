@@ -1,0 +1,28 @@
+[package]
+name = "house-desktop"
+version = "0.1.0"
+description = "HOUSE: crea, mezcla y proyecta música"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+publish = false
+
+[lib]
+name = "house_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+house-engine = { path = "../crates/house-engine" }
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+cpal = "0.18"
+rtrb = "0.4"
+
+[features]
+# Used by `tauri build` (and by plain cargo builds that should embed the
+# interface from app/dist instead of loading the Vite dev server).
+custom-protocol = ["tauri/custom-protocol"]

@@ -82,7 +82,11 @@ impl Acid {
             self.gliding = false;
             self.freq = self.target;
             self.amp.gate_on();
-            let d = if accent { self.fdecay * 0.6 } else { self.fdecay };
+            let d = if accent {
+                self.fdecay * 0.6
+            } else {
+                self.fdecay
+            };
             self.fenv.trigger(1.0, d, sr);
         }
         self.gate = true;
@@ -110,15 +114,23 @@ impl Acid {
             self.freq += (self.target - self.freq) * self.glide;
         }
         let e = self.fenv.next();
-        if self.cr % CR == 0 {
-            let acc = if self.accent { 0.9 * self.punch + 0.3 } else { 0.0 };
+        if self.cr.is_multiple_of(CR) {
+            let acc = if self.accent {
+                0.9 * self.punch + 0.3
+            } else {
+                0.0
+            };
             let oct = self.env_mod * 4.2 * e + acc * e * 1.5;
             let cut = self.base_cut * 2f32.powf(oct);
             self.f1.set(cut, self.res, sr);
             self.f2.set(cut * 1.05, 0.1, sr);
         }
         self.cr = self.cr.wrapping_add(1);
-        let x = if self.square { self.osc.square(self.freq, sr, 0.5) * 0.8 } else { self.osc.saw(self.freq, sr) };
+        let x = if self.square {
+            self.osc.square(self.freq, sr, 0.5) * 0.8
+        } else {
+            self.osc.saw(self.freq, sr)
+        };
         let y = self.f2.lp(self.f1.lp(x));
         let y = self.dc.hp(y);
         let drive = 1.4 + self.punch * 2.0 + if self.accent { 0.8 } else { 0.0 };
@@ -297,7 +309,13 @@ impl Poly {
         let sustain = p[7];
         for v in self.voices.iter_mut() {
             v.amp.set(attack, tail, sustain, tail * 0.8, sr);
-            v.fenv.set(attack * 0.5 + 0.001, tail * 0.6, sustain * 0.5, tail * 0.6, sr);
+            v.fenv.set(
+                attack * 0.5 + 0.001,
+                tail * 0.6,
+                sustain * 0.5,
+                tail * 0.6,
+                sr,
+            );
         }
     }
 

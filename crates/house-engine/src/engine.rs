@@ -86,7 +86,14 @@ pub struct Step {
 
 impl Default for Step {
     fn default() -> Self {
-        Step { on: false, vel: 0.8, len: 1, accent: false, slide: false, notes: [-1; 4] }
+        Step {
+            on: false,
+            vel: 0.8,
+            len: 1,
+            accent: false,
+            slide: false,
+            notes: [-1; 4],
+        }
     }
 }
 
@@ -106,7 +113,10 @@ struct PendingOff {
     samples: i64,
 }
 
-const NO_OFF: PendingOff = PendingOff { note: -1, samples: 0 };
+const NO_OFF: PendingOff = PendingOff {
+    note: -1,
+    samples: 0,
+};
 
 pub struct Track {
     pub inst: Inst,
@@ -162,7 +172,10 @@ impl Track {
     fn schedule_off(&mut self, note: u8, samples: i64) {
         for o in self.offs.iter_mut() {
             if o.note < 0 {
-                *o = PendingOff { note: note as i16, samples };
+                *o = PendingOff {
+                    note: note as i16,
+                    samples,
+                };
                 return;
             }
         }
@@ -173,7 +186,10 @@ impl Track {
                 idx = i;
             }
         }
-        self.offs[idx] = PendingOff { note: note as i16, samples };
+        self.offs[idx] = PendingOff {
+            note: note as i16,
+            samples,
+        };
     }
 }
 
@@ -275,7 +291,11 @@ pub struct Engine {
 
 impl Engine {
     pub fn new(sr: f32) -> Self {
-        let sr = if sr.is_finite() && sr > 8000.0 { sr } else { 48_000.0 };
+        let sr = if sr.is_finite() && sr > 8000.0 {
+            sr
+        } else {
+            48_000.0
+        };
         let mut e = Engine {
             sr,
             tracks: core::array::from_fn(|_| Track::new(sr)),
@@ -350,7 +370,10 @@ impl Engine {
             return Some(data);
         }
         let old = self.bank[slot].take();
-        self.bank[slot] = Some(SampleBuf { data, sr: if sr > 1000.0 { sr } else { self.sr } });
+        self.bank[slot] = Some(SampleBuf {
+            data,
+            sr: if sr > 1000.0 { sr } else { self.sr },
+        });
         old.map(|b| b.data)
     }
 
@@ -369,7 +392,7 @@ impl Engine {
     fn step_duration(&self, index: u64) -> f64 {
         let base = self.base_step();
         let s = self.swing as f64;
-        if index % 2 == 0 {
+        if index.is_multiple_of(2) {
             2.0 * s * base
         } else {
             2.0 * (1.0 - s) * base
@@ -377,7 +400,10 @@ impl Engine {
     }
 
     fn song_bars(&self) -> u32 {
-        self.sections[..self.section_count].iter().map(|s| s.bars).sum()
+        self.sections[..self.section_count]
+            .iter()
+            .map(|s| s.bars)
+            .sum()
     }
 
     /// Section index, its first bar and length for a bar of the song.
@@ -432,10 +458,26 @@ impl Engine {
                 }
             }
             Command::SetSwing(s) => self.swing = s.clamp(0.5, 0.75),
-            Command::SetStep { track, step, on, vel, len, accent, slide, notes } => {
+            Command::SetStep {
+                track,
+                step,
+                on,
+                vel,
+                len,
+                accent,
+                slide,
+                notes,
+            } => {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     if let Some(s) = t.steps.get_mut(step as usize) {
-                        *s = Step { on, vel: vel.clamp(0.0, 1.0), len: len.max(1), accent, slide, notes };
+                        *s = Step {
+                            on,
+                            vel: vel.clamp(0.0, 1.0),
+                            len: len.max(1),
+                            accent,
+                            slide,
+                            notes,
+                        };
                     }
                 }
             }
@@ -462,7 +504,11 @@ impl Engine {
                     }
                 }
             }
-            Command::SetMix { track, param, value } => {
+            Command::SetMix {
+                track,
+                param,
+                value,
+            } => {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     match param {
                         mix::VOLUME_DB => t.vol_db = value.clamp(-90.0, 12.0),
@@ -512,9 +558,18 @@ impl Engine {
                 }
             }
             Command::SetSectionCount(c) => self.section_count = (c as usize).min(MAX_SECTIONS),
-            Command::SetSection { index, bars, mask, kind } => {
+            Command::SetSection {
+                index,
+                bars,
+                mask,
+                kind,
+            } => {
                 if let Some(s) = self.sections.get_mut(index as usize) {
-                    *s = Section { bars: (bars as u32).max(1), mask, kind };
+                    *s = Section {
+                        bars: (bars as u32).max(1),
+                        mask,
+                        kind,
+                    };
                 }
             }
             Command::SetMaster { param, value } => match param {
@@ -540,16 +595,32 @@ impl Engine {
                 master::METRONOME_TO_MASTER => self.cue_to_master = value > 0.5,
                 _ => {}
             },
-            Command::SetSidechainSource(t) => self.sidechain = if (t as usize) < MAX_TRACKS { Some(t as usize) } else { None },
+            Command::SetSidechainSource(t) => {
+                self.sidechain = if (t as usize) < MAX_TRACKS {
+                    Some(t as usize)
+                } else {
+                    None
+                }
+            }
             Command::Seek { bar } => {
                 let total = self.song_bars();
-                let b = if self.mode == 1 && total > 0 { bar % total } else { bar };
+                let b = if self.mode == 1 && total > 0 {
+                    bar % total
+                } else {
+                    bar
+                };
                 self.global_step = b as u64 * 16;
                 self.samples_to_next = 0.0;
                 self.all_notes_off();
             }
             Command::AllNotesOff => self.all_notes_off(),
-            Command::Preview { kind, model, note, vel, params } => {
+            Command::Preview {
+                kind,
+                model,
+                note,
+                vel,
+                params,
+            } => {
                 let p = &mut self.preview;
                 if p.kind != kind || p.model != model {
                     p.kind = kind;
@@ -595,7 +666,15 @@ impl Engine {
 
     /// Starts a sound on a track. `step` carries the pattern step when the
     /// sequencer is the one triggering (used for note lengths and slides).
-    fn trigger(&mut self, ti: usize, note: u8, vel: f32, accent: bool, slide: bool, step: Option<(Step, u64)>) {
+    fn trigger(
+        &mut self,
+        ti: usize,
+        note: u8,
+        vel: f32,
+        accent: bool,
+        slide: bool,
+        step: Option<(Step, u64)>,
+    ) {
         let sr = self.sr;
         let bpm = self.bpm;
         let base = self.base_step();
@@ -691,13 +770,17 @@ impl Engine {
             if !s.on {
                 continue;
             }
-            let note = if s.notes[0] >= 0 { s.notes[0] as u8 } else { 60 };
+            let note = if s.notes[0] >= 0 {
+                s.notes[0] as u8
+            } else {
+                60
+            };
             self.trigger(ti, note, s.vel, s.accent, s.slide, Some((s, local)));
             if self.tracks[ti].audible {
                 self.mark_hit(ti, s.vel);
             }
         }
-        if self.metronome && step_in_bar % 4 == 0 {
+        if self.metronome && step_in_bar.is_multiple_of(4) {
             let p = [if step_in_bar == 0 { 1.0 } else { 0.0 }, 0.5, 0.5, 0.0];
             self.click.trigger(0.9, &p, self.sr, self.bpm);
         }
@@ -745,7 +828,14 @@ impl Engine {
     /// Renders `frames` (≤ MAX_BLOCK) into `out_l/out_r` and `out_cue_l/r`.
     pub fn process(&mut self, frames: usize) {
         let frames = frames.min(MAX_BLOCK);
-        for b in [&mut self.mix_l, &mut self.mix_r, &mut self.rev_in, &mut self.del_in, &mut self.cue_l, &mut self.cue_r] {
+        for b in [
+            &mut self.mix_l,
+            &mut self.mix_r,
+            &mut self.rev_in,
+            &mut self.del_in,
+            &mut self.cue_l,
+            &mut self.cue_r,
+        ] {
             b[..frames].fill(0.0);
         }
         self.update_audibility();
@@ -842,7 +932,11 @@ impl Engine {
             let mut peak = 0.0f32;
             for i in 0..n {
                 let g = t.gain.next();
-                let d = if t.duck > 0.0 { 1.0 - t.duck * self.duck_buf[i] } else { 1.0 };
+                let d = if t.duck > 0.0 {
+                    1.0 - t.duck * self.duck_buf[i]
+                } else {
+                    1.0
+                };
                 let x = self.buf[i] * g * d;
                 peak = peak.max(x.abs());
                 let j = offset + i;
@@ -940,13 +1034,21 @@ impl Engine {
         s[st::STEP] = step as f32;
         s[st::BAR] = (step / 16) as f32;
         s[st::STEP_IN_BAR] = (step % 16) as f32;
-        let frac = if self.playing && self.cur_dur > 0.0 { (1.0 - self.samples_to_next / self.cur_dur).clamp(0.0, 1.0) as f32 } else { 0.0 };
+        let frac = if self.playing && self.cur_dur > 0.0 {
+            (1.0 - self.samples_to_next / self.cur_dur).clamp(0.0, 1.0) as f32
+        } else {
+            0.0
+        };
         s[st::STEP_FRACTION] = frac;
         s[st::BEAT_PHASE] = (((step % 4) as f32) + frac) / 4.0;
         s[st::TRIGGERS] = (self.trig_acc & 0xFFFF) as f32;
         s[st::PEAK_L] = self.peak_acc[0];
         s[st::PEAK_R] = self.peak_acc[1];
-        s[st::RMS] = if self.rms_n > 0 { (self.rms_sum / self.rms_n as f64).sqrt() as f32 } else { 0.0 };
+        s[st::RMS] = if self.rms_n > 0 {
+            (self.rms_sum / self.rms_n as f64).sqrt() as f32
+        } else {
+            0.0
+        };
         s[st::KICK] = self.hits[0];
         s[st::SNARE] = self.hits[1];
         s[st::HAT] = self.hits[2];
@@ -954,9 +1056,7 @@ impl Engine {
         s[st::BPM] = self.bpm;
         s[st::SONG_BARS] = song_bars as f32;
         s[st::MODE] = self.mode as f32;
-        for i in 0..MAX_TRACKS {
-            s[st::TRACK_PEAKS + i] = self.track_peak_acc[i];
-        }
+        s[st::TRACK_PEAKS..st::TRACK_PEAKS + MAX_TRACKS].copy_from_slice(&self.track_peak_acc);
         s[st::BANDS..st::BANDS + BANDS].copy_from_slice(&bands);
         match sec {
             Some((si, start, len)) => {
@@ -968,7 +1068,11 @@ impl Engine {
                 s[st::BAR_IN_SECTION] = (bar - start) as f32;
                 s[st::BARS_TO_NEXT] = len as f32 - in_sec;
                 s[st::CUR_KIND] = self.sections[si].kind as f32;
-                let ni = if si + 1 < self.section_count { si + 1 } else { 0 };
+                let ni = if si + 1 < self.section_count {
+                    si + 1
+                } else {
+                    0
+                };
                 s[st::NEXT_KIND] = self.sections[ni].kind as f32;
             }
             None => {

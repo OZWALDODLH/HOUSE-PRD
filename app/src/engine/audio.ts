@@ -31,9 +31,16 @@ export function startAudio(): Promise<EngineBridge | null> {
         statusAt = performance.now();
         pushStatus(s);
       });
+      // The desktop app remembers the chosen devices (bocina and audífonos).
+      const outputs = useUi.getState().outputs;
+      let cueApart = false;
+      if (b.kind === 'native' && (outputs.master || outputs.cue)) {
+        const e = await b.setRouting(outputs);
+        cueApart = !e && !!outputs.cue;
+      }
       const p = getProject();
       lastSent = p;
-      b.send([cmd.stop(), cmd.master(MASTER.CUE_TO_MASTER, 1), ...projectCmds(p)]);
+      b.send([cmd.stop(), cmd.master(MASTER.CUE_TO_MASTER, cueApart ? 0 : 1), ...projectCmds(p)]);
       sendAllSamples(b);
       unsubscribe?.();
       unsubscribe = useStudio.subscribe((s) => {
@@ -79,6 +86,19 @@ export function endAudition(): void {
 }
 
 export const isAuditioning = (): boolean => auditioning;
+
+/**
+ * Sends the whole project again (the desktop engine restarts when the
+ * outputs change). `cueApart`: the pre-listen bus has its own device.
+ */
+export function resync(cueApart: boolean): void {
+  const b = bridgeIfReady();
+  if (!b) return;
+  const p = getProject();
+  lastSent = p;
+  b.send([cmd.stop(), cmd.master(MASTER.CUE_TO_MASTER, cueApart ? 0 : 1), ...projectCmds(p)]);
+  sendAllSamples(b);
+}
 
 export function send(cmds: Cmd[]): void {
   bridgeIfReady()?.send(cmds);

@@ -24,7 +24,15 @@ struct SVoice {
 
 impl SVoice {
     fn new() -> Self {
-        SVoice { pos: 0.0, rate: 1.0, active: false, amp: Adsr::default(), vel: 0.0, note: 60, filt: Svf::default() }
+        SVoice {
+            pos: 0.0,
+            rate: 1.0,
+            active: false,
+            amp: Adsr::default(),
+            vel: 0.0,
+            note: 60,
+            filt: Svf::default(),
+        }
     }
 }
 
@@ -40,7 +48,14 @@ pub struct Sampler {
 
 impl Sampler {
     pub fn new(sr: f32) -> Self {
-        let mut s = Sampler { voices: [SVoice::new(); SAMPLER_VOICES], slot: 0, next: 0, tune: 0.0, start: 0.0, cut: 16000.0 };
+        let mut s = Sampler {
+            voices: [SVoice::new(); SAMPLER_VOICES],
+            slot: 0,
+            next: 0,
+            tune: 0.0,
+            start: 0.0,
+            cut: 16000.0,
+        };
         s.set_params(&[0.5, 0.0, 0.6, 1.0], sr);
         s
     }
@@ -57,7 +72,9 @@ impl Sampler {
     }
 
     pub fn note_on(&mut self, note: u8, vel: f32, bank: &[Option<SampleBuf>], sr: f32) {
-        let Some(Some(buf)) = bank.get(self.slot) else { return };
+        let Some(Some(buf)) = bank.get(self.slot) else {
+            return;
+        };
         if buf.data.is_empty() {
             return;
         }
@@ -83,7 +100,9 @@ impl Sampler {
 
     #[inline]
     pub fn next(&mut self, bank: &[Option<SampleBuf>]) -> f32 {
-        let Some(Some(buf)) = bank.get(self.slot) else { return 0.0 };
+        let Some(Some(buf)) = bank.get(self.slot) else {
+            return 0.0;
+        };
         let data = &buf.data;
         let n = data.len();
         let mut out = 0.0;

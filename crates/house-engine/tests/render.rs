@@ -11,14 +11,54 @@ fn cmd(e: &mut Engine, a: &[f64]) {
 }
 
 fn drum(e: &mut Engine, track: u8, model: u8, steps: &[usize]) {
-    cmd(e, &[op::SET_TRACK_KIND as f64, track as f64, kind::DRUM as f64, model as f64]);
+    cmd(
+        e,
+        &[
+            op::SET_TRACK_KIND as f64,
+            track as f64,
+            kind::DRUM as f64,
+            model as f64,
+        ],
+    );
     for &s in steps {
-        cmd(e, &[op::SET_STEP as f64, track as f64, s as f64, 1.0, 0.9, 1.0, 0.0, 0.0, -1.0, -1.0, -1.0, -1.0]);
+        cmd(
+            e,
+            &[
+                op::SET_STEP as f64,
+                track as f64,
+                s as f64,
+                1.0,
+                0.9,
+                1.0,
+                0.0,
+                0.0,
+                -1.0,
+                -1.0,
+                -1.0,
+                -1.0,
+            ],
+        );
     }
 }
 
 fn note(e: &mut Engine, track: u8, step: usize, n: i32, slide: bool) {
-    cmd(e, &[op::SET_STEP as f64, track as f64, step as f64, 1.0, 0.85, 1.0, 0.0, if slide { 1.0 } else { 0.0 }, n as f64, -1.0, -1.0, -1.0]);
+    cmd(
+        e,
+        &[
+            op::SET_STEP as f64,
+            track as f64,
+            step as f64,
+            1.0,
+            0.85,
+            1.0,
+            0.0,
+            if slide { 1.0 } else { 0.0 },
+            n as f64,
+            -1.0,
+            -1.0,
+            -1.0,
+        ],
+    );
 }
 
 fn render(e: &mut Engine, seconds: f32) -> (Vec<f32>, Vec<f32>) {
@@ -39,8 +79,19 @@ fn tech_house() -> Engine {
     drum(&mut e, 0, 0, &[0, 4, 8, 12]); // kick
     drum(&mut e, 1, 2, &[4, 12]); // clap
     drum(&mut e, 2, 4, &[2, 6, 10, 14]); // open hat
-    cmd(&mut e, &[op::SET_TRACK_KIND as f64, 3.0, kind::ACID as f64, 0.0]);
-    for (s, n) in [(2, 45), (3, 45), (6, 48), (7, 45), (10, 43), (11, 45), (14, 52)] {
+    cmd(
+        &mut e,
+        &[op::SET_TRACK_KIND as f64, 3.0, kind::ACID as f64, 0.0],
+    );
+    for (s, n) in [
+        (2, 45),
+        (3, 45),
+        (6, 48),
+        (7, 45),
+        (10, 43),
+        (11, 45),
+        (14, 52),
+    ] {
         note(&mut e, 3, s, n, s == 3);
     }
     cmd(&mut e, &[op::SET_MIX as f64, 3.0, mix::DUCK as f64, 0.8]);
@@ -53,7 +104,10 @@ fn tech_house_pattern_sounds_and_stays_under_the_ceiling() {
     let mut e = tech_house();
     cmd(&mut e, &[op::PLAY as f64]);
     let (l, r) = render(&mut e, 4.0);
-    assert!(l.iter().chain(r.iter()).all(|v| v.is_finite()), "no NaN or inf");
+    assert!(
+        l.iter().chain(r.iter()).all(|v| v.is_finite()),
+        "no NaN or inf"
+    );
     let peak = l.iter().chain(r.iter()).fold(0.0f32, |a, v| a.max(v.abs()));
     assert!(peak > 0.2, "audible, peak {peak}");
     assert!(peak <= 0.9, "limiter keeps it under -1 dBFS, peak {peak}");
@@ -74,7 +128,10 @@ fn kick_lands_on_every_beat() {
         let at = b * beat + la;
         let before = rms(&l[at.saturating_sub(400)..at.saturating_sub(100)]);
         let after = rms(&l[at + 50..at + 1500]);
-        assert!(after > 0.05 && after > before * 4.0, "beat {b}: before {before} after {after}");
+        assert!(
+            after > 0.05 && after > before * 4.0,
+            "beat {b}: before {before} after {after}"
+        );
     }
 }
 
@@ -89,7 +146,10 @@ fn swing_delays_the_off_beat_sixteenths() {
     let base = SR as f64 * 60.0 / 120.0 / 4.0;
     let expected = (2.0 * 0.66 * base) as usize + 64;
     let first = l.iter().position(|v| v.abs() > 0.01).unwrap();
-    assert!((first as i64 - expected as i64).abs() < 8, "first hit at {first}, expected {expected}");
+    assert!(
+        (first as i64 - expected as i64).abs() < 8,
+        "first hit at {first}, expected {expected}"
+    );
 }
 
 #[test]
@@ -99,8 +159,14 @@ fn song_sections_mute_tracks_outside_their_mask() {
     drum(&mut e, 0, 0, &[0, 4, 8, 12]);
     // Section 0: 1 bar with nothing; section 1: 1 bar with the kick.
     cmd(&mut e, &[op::SET_SECTION_COUNT as f64, 2.0]);
-    cmd(&mut e, &[op::SET_SECTION as f64, 0.0, 1.0, 0.0, section::INTRO as f64]);
-    cmd(&mut e, &[op::SET_SECTION as f64, 1.0, 1.0, 1.0, section::DROP as f64]);
+    cmd(
+        &mut e,
+        &[op::SET_SECTION as f64, 0.0, 1.0, 0.0, section::INTRO as f64],
+    );
+    cmd(
+        &mut e,
+        &[op::SET_SECTION as f64, 1.0, 1.0, 1.0, section::DROP as f64],
+    );
     cmd(&mut e, &[op::SET_MODE as f64, 1.0]);
     cmd(&mut e, &[op::PLAY as f64]);
     let (l, _) = render(&mut e, 4.0);
@@ -115,10 +181,32 @@ fn sidechain_pumps_the_bass() {
     let mut e = Engine::new(SR);
     cmd(&mut e, &[op::SET_BPM as f64, 120.0]);
     drum(&mut e, 0, 0, &[0, 4, 8, 12]);
-    cmd(&mut e, &[op::SET_MIX as f64, 0.0, mix::VOLUME_DB as f64, -90.0]); // hear only the bass
-    cmd(&mut e, &[op::SET_TRACK_KIND as f64, 1.0, kind::POLY as f64, 0.0]);
+    cmd(
+        &mut e,
+        &[op::SET_MIX as f64, 0.0, mix::VOLUME_DB as f64, -90.0],
+    ); // hear only the bass
+    cmd(
+        &mut e,
+        &[op::SET_TRACK_KIND as f64, 1.0, kind::POLY as f64, 0.0],
+    );
     cmd(&mut e, &[op::SET_PARAM as f64, 1.0, 7.0, 1.0]); // full sustain
-    cmd(&mut e, &[op::SET_STEP as f64, 1.0, 0.0, 1.0, 0.8, 16.0, 0.0, 0.0, 45.0, -1.0, -1.0, -1.0]);
+    cmd(
+        &mut e,
+        &[
+            op::SET_STEP as f64,
+            1.0,
+            0.0,
+            1.0,
+            0.8,
+            16.0,
+            0.0,
+            0.0,
+            45.0,
+            -1.0,
+            -1.0,
+            -1.0,
+        ],
+    );
     cmd(&mut e, &[op::SET_MIX as f64, 1.0, mix::DUCK as f64, 1.0]);
     cmd(&mut e, &[op::SET_SIDECHAIN as f64, 0.0]);
     cmd(&mut e, &[op::PLAY as f64]);
@@ -131,11 +219,39 @@ fn sidechain_pumps_the_bass() {
 
 #[test]
 fn every_instrument_makes_sound() {
-    for (k, model) in [(kind::DRUM, 0u8), (kind::DRUM, 2), (kind::DRUM, 3), (kind::DRUM, 6), (kind::DRUM, 11), (kind::ACID, 0), (kind::BASS808, 0), (kind::POLY, 0)] {
+    for (k, model) in [
+        (kind::DRUM, 0u8),
+        (kind::DRUM, 2),
+        (kind::DRUM, 3),
+        (kind::DRUM, 6),
+        (kind::DRUM, 11),
+        (kind::ACID, 0),
+        (kind::BASS808, 0),
+        (kind::POLY, 0),
+    ] {
         let mut e = Engine::new(SR);
         cmd(&mut e, &[op::SET_BPM as f64, 120.0]);
-        cmd(&mut e, &[op::SET_TRACK_KIND as f64, 0.0, k as f64, model as f64]);
-        cmd(&mut e, &[op::SET_STEP as f64, 0.0, 0.0, 1.0, 0.9, 4.0, 0.0, 0.0, 57.0, 60.0, 64.0, -1.0]);
+        cmd(
+            &mut e,
+            &[op::SET_TRACK_KIND as f64, 0.0, k as f64, model as f64],
+        );
+        cmd(
+            &mut e,
+            &[
+                op::SET_STEP as f64,
+                0.0,
+                0.0,
+                1.0,
+                0.9,
+                4.0,
+                0.0,
+                0.0,
+                57.0,
+                60.0,
+                64.0,
+                -1.0,
+            ],
+        );
         cmd(&mut e, &[op::PLAY as f64]);
         let (l, _) = render(&mut e, if model == 11 { 4.5 } else { 0.6 });
         assert!(rms(&l) > 0.002, "kind {k} model {model} is silent");
@@ -148,7 +264,10 @@ fn sampler_plays_loaded_audio() {
     let mut e = Engine::new(SR);
     let tone: Vec<f32> = (0..24_000).map(|i| (i as f32 * 0.05).sin() * 0.5).collect();
     assert!(e.load_sample(3, tone.into_boxed_slice(), SR).is_none());
-    cmd(&mut e, &[op::SET_TRACK_KIND as f64, 0.0, kind::SAMPLER as f64, 0.0]);
+    cmd(
+        &mut e,
+        &[op::SET_TRACK_KIND as f64, 0.0, kind::SAMPLER as f64, 0.0],
+    );
     cmd(&mut e, &[op::SET_SAMPLE_SLOT as f64, 0.0, 3.0]);
     cmd(&mut e, &[op::NOTE_ON as f64, 0.0, 60.0, 1.0]);
     let (l, _) = render(&mut e, 0.3);

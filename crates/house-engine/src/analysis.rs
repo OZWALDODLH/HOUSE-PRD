@@ -21,7 +21,13 @@ impl Analyzer {
             // The analyzer runs at half rate, so the filters use sr / 2.
             f.set_q(exp_map(t, 40.0, 10_000.0), 2.2, sr / 2.0);
         }
-        Analyzer { filters, env: [0.0; BANDS], att: 1.0 - tau_coef(0.004, sr / 2.0), rel: 1.0 - tau_coef(0.14, sr / 2.0), decim: 0 }
+        Analyzer {
+            filters,
+            env: [0.0; BANDS],
+            att: 1.0 - tau_coef(0.004, sr / 2.0),
+            rel: 1.0 - tau_coef(0.14, sr / 2.0),
+            decim: 0,
+        }
     }
 
     /// Feed one mono sample. Runs at half rate to keep it cheap.

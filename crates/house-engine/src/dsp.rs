@@ -153,7 +153,11 @@ impl Osc {
     #[inline]
     pub fn triangle(&mut self, freq: f32, sr: f32) -> f32 {
         let p = self.phase;
-        let v = if p < 0.5 { 4.0 * p - 1.0 } else { 3.0 - 4.0 * p };
+        let v = if p < 0.5 {
+            4.0 * p - 1.0
+        } else {
+            3.0 - 4.0 * p
+        };
         self.advance((freq / sr).clamp(0.0, 0.49));
         v
     }
@@ -171,7 +175,11 @@ impl Osc {
             t2 += 1.0;
         }
         sq -= poly_blep(t2, dt);
-        let tri = if p < 0.5 { 4.0 * p - 1.0 } else { 3.0 - 4.0 * p };
+        let tri = if p < 0.5 {
+            4.0 * p - 1.0
+        } else {
+            3.0 - 4.0 * p
+        };
         self.advance(dt);
         (saw, sq, tri)
     }
@@ -198,7 +206,14 @@ pub struct Svf {
 
 impl Default for Svf {
     fn default() -> Self {
-        let mut f = Svf { ic1: 0.0, ic2: 0.0, a1: 0.0, a2: 0.0, a3: 0.0, k: 1.4 };
+        let mut f = Svf {
+            ic1: 0.0,
+            ic2: 0.0,
+            a1: 0.0,
+            a2: 0.0,
+            a3: 0.0,
+            k: 1.4,
+        };
         f.set(1000.0, 0.0, 48_000.0);
         f
     }
@@ -240,7 +255,11 @@ impl Svf {
         let v2 = self.ic2 + self.a2 * self.ic1 + self.a3 * v3;
         self.ic1 = 2.0 * v1 - self.ic1 + ANTI_DENORMAL;
         self.ic2 = 2.0 * v2 - self.ic2 + ANTI_DENORMAL;
-        SvfOut { lp: v2, bp: v1, hp: v0 - self.k * v1 - v2 }
+        SvfOut {
+            lp: v2,
+            bp: v1,
+            hp: v0 - self.k * v1 - v2,
+        }
     }
     #[inline]
     pub fn lp(&mut self, x: f32) -> f32 {
@@ -292,7 +311,11 @@ pub struct Smooth {
 
 impl Smooth {
     pub fn new(v: f32, seconds: f32, sr: f32) -> Self {
-        Smooth { value: v, target: v, coef: 1.0 - tau_coef(seconds, sr) }
+        Smooth {
+            value: v,
+            target: v,
+            coef: 1.0 - tau_coef(seconds, sr),
+        }
     }
     #[inline]
     pub fn set(&mut self, v: f32) {
@@ -327,7 +350,14 @@ pub struct Adsr {
 
 impl Default for Adsr {
     fn default() -> Self {
-        Adsr { stage: Stage::Idle, level: 0.0, a: 0.5, d: 0.999, s: 0.7, r: 0.999 }
+        Adsr {
+            stage: Stage::Idle,
+            level: 0.0,
+            a: 0.5,
+            d: 0.999,
+            s: 0.7,
+            r: 0.999,
+        }
     }
 }
 

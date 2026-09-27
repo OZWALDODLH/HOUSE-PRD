@@ -1,0 +1,16 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Lo que pueden hacer las ventanas de HOUSE: la principal y la de visuales.",
+  "windows": ["main", "visuales"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-set-position",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-focus",
+    "core:window:allow-available-monitors",
+    "core:window:allow-current-monitor",
+    "core:webview:allow-create-webview-window",
+    "dialog:default"
+  ]
+}
