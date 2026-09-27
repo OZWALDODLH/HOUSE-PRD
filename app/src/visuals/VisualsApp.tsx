@@ -1,11 +1,11 @@
 // The visuals window: only the picture. F full screen, B blackout, Esc leave.
 import { useEffect, useRef, useState } from 'react';
-import { STATUS_LEN } from '../engine/protocol';
+import { StatusFold } from '../engine/live';
 import { listen, post, type VisualSettings } from './link';
 import { Stage } from './Stage';
 
 export function VisualsApp() {
-  const status = useRef(new Float32Array(STATUS_LEN));
+  const status = useRef(new StatusFold());
   const [settings, setSettings] = useState<VisualSettings>({ scene: 'auto', mood: 0.55, brightness: 1, blackout: false });
   const [hint, setHint] = useState(true);
   const [idle, setIdle] = useState(false);
@@ -13,7 +13,7 @@ export function VisualsApp() {
   useEffect(() => {
     document.title = 'HOUSE · Visuales';
     const off = listen((m) => {
-      if (m.t === 'live') status.current = Float32Array.from(m.s);
+      if (m.t === 'live') status.current.push(m.s);
       else if (m.t === 'settings') setSettings(m.settings);
     });
     post({ t: 'hello' });
@@ -56,7 +56,7 @@ export function VisualsApp() {
 
   return (
     <div className={`ventana-vis${idle ? ' sin-cursor' : ''}`} onDoubleClick={toggleFull}>
-      <Stage getStatus={() => status.current} settings={settings} className="lienzo" maxDpr={1.25} />
+      <Stage getStatus={() => status.current.read()} settings={settings} className="lienzo" maxDpr={1.25} />
       {hint && <div className="pista-vis">F pantalla completa, B apagón, Esc salir</div>}
     </div>
   );

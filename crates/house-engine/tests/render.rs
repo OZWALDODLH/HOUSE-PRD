@@ -325,3 +325,24 @@ fn soundboard_shot_plays_on_master() {
     assert!(peak > 0.1, "shot too quiet: {peak}");
     assert!(cue < 1e-6, "shot leaked to the cue bus: {cue}");
 }
+
+/// A host that reads status less often than the engine writes it keeps every
+/// trigger and the highest peaks, with the newest position.
+#[test]
+fn merged_status_keeps_hits_between_reads() {
+    use house_engine::{merge_status, st, STATUS_LEN};
+    let mut a = [0.0f32; STATUS_LEN];
+    let mut b = [0.0f32; STATUS_LEN];
+    a[st::TRIGGERS] = 0b0001 as f32;
+    a[st::PEAK_L] = 0.9;
+    a[st::TRACK_PEAKS + 3] = 0.7;
+    a[st::STEP] = 4.0;
+    b[st::TRIGGERS] = 0b0100 as f32;
+    b[st::PEAK_L] = 0.2;
+    b[st::STEP] = 5.0;
+    merge_status(&mut a, &b);
+    assert_eq!(a[st::TRIGGERS] as u32, 0b0101);
+    assert_eq!(a[st::PEAK_L], 0.9);
+    assert_eq!(a[st::TRACK_PEAKS + 3], 0.7);
+    assert_eq!(a[st::STEP], 5.0);
+}

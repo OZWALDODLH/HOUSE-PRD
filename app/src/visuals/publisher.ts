@@ -1,5 +1,5 @@
 // Main window side: sends the engine status and the settings to the visuals window.
-import { onLiveStatus } from '../engine/live';
+import { liveFold, onLiveStatus } from '../engine/live';
 import { listen, post } from './link';
 import { settingsOf, useVisuals } from './settings';
 
@@ -10,16 +10,19 @@ export function startPublisher(): void {
   started = true;
   let last = 0;
   let connected = false;
-  onLiveStatus((s) => {
+  // Snapshots skipped by the pacing below still reach the window, folded in.
+  const fold = liveFold();
+  onLiveStatus(() => {
     if (!connected) return;
     const now = performance.now();
     if (now - last < 15) return;
     last = now;
-    post({ t: 'live', s: Array.from(s) });
+    post({ t: 'live', s: Array.from(fold.read()) });
   });
   listen((m) => {
     if (m.t === 'hello') {
       connected = true;
+      fold.reset();
       post({ t: 'settings', settings: settingsOf(useVisuals.getState()) });
     } else if (m.t === 'bye') {
       connected = false;

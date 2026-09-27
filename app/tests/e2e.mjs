@@ -1,6 +1,7 @@
 // End-to-end checks in a real browser (Chromium): the app loads, the engine
-// plays, song mode follows the sections, export writes a valid WAV, undo
-// works, the visuals window opens and the safe mode holds under stress.
+// plays and every hit reaches the screen, song mode follows the sections,
+// export writes a valid WAV, undo works, the soundboard plays, the visuals
+// window opens and the safe mode holds under stress.
 //
 //   npm run build && npm run test:e2e
 //
@@ -67,6 +68,29 @@ try {
     assert(s[8] > 0.1, `sin nivel de salida (${s[8]})`);
     assert(s[51] === 126, `BPM ${s[51]}`);
     return `paso ${s[1]}, pico ${s[8].toFixed(2)}`;
+  });
+
+  await check('Cada bombo prende su pad, aunque caiga entre dos cuadros', async () => {
+    await page.evaluate(() => {
+      const el = document.querySelector('.rejilla .pad');
+      let on = el.classList.contains('golpe');
+      window.__flashes = 0;
+      window.__step0 = window.__house.getStatus()[1];
+      window.__obs = new MutationObserver(() => {
+        const now = el.classList.contains('golpe');
+        if (now && !on) window.__flashes++;
+        on = now;
+      });
+      window.__obs.observe(el, { attributes: true, attributeFilter: ['class'] });
+    });
+    await page.waitForTimeout(4000);
+    const [flashes, steps] = await page.evaluate(() => {
+      window.__obs.disconnect();
+      return [window.__flashes, window.__house.getStatus()[1] - window.__step0];
+    });
+    const kicks = steps / 4;
+    assert(Math.abs(flashes - kicks) <= 1, `${flashes} destellos para ${kicks.toFixed(1)} bombos`);
+    return `${flashes} destellos, ${kicks.toFixed(1)} bombos`;
   });
 
   await check('Modo Canción salta al ¡Drop!', async () => {

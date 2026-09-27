@@ -21,7 +21,7 @@ use std::time::Duration;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{BufferSize, FromSample, SampleFormat, SizedSample, StreamConfig, SupportedBufferSize};
-use house_engine::{Command, Engine, MAX_BLOCK, STATUS_LEN};
+use house_engine::{merge_status, Command, Engine, MAX_BLOCK, STATUS_LEN};
 use rtrb::{Consumer, Producer, RingBuffer};
 use serde::{Deserialize, Serialize};
 use tauri::ipc::Channel;
@@ -242,9 +242,14 @@ fn status_loop(
 ) {
     while !stop.load(Ordering::Relaxed) {
         thread::sleep(Duration::from_millis(16));
+        // The engine writes ~75 snapshots a second; fold the ones that arrived
+        // since the last wake so no hit or peak is lost on the way.
         let mut latest: Option<[f32; STATUS_LEN]> = None;
         while let Ok(s) = st.pop() {
-            latest = Some(s);
+            match latest.as_mut() {
+                Some(acc) => merge_status(acc, &s),
+                None => latest = Some(s),
+            }
         }
         while gb.pop().is_ok() {}
         if let Some(s) = latest {

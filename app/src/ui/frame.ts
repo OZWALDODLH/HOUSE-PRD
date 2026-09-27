@@ -1,17 +1,19 @@
 // One animation loop for everything that moves with the music (meters,
 // playhead, speaker). Components update the DOM directly, without re-rendering.
 import { useEffect, useRef } from 'react';
-import { getStatus } from '../engine/live';
+import { liveFold } from '../engine/live';
 
 type Cb = (s: Float32Array, dt: number) => void;
 const cbs = new Set<Cb>();
 let raf = 0;
 let last = 0;
+// Every snapshot counts: a hit that lands between two frames still flashes.
+const fold = liveFold();
 
 function loop(t: number) {
   const dt = last ? Math.min(0.1, (t - last) / 1000) : 1 / 60;
   last = t;
-  const s = getStatus();
+  const s = fold.read();
   for (const f of cbs) f(s, dt);
   raf = cbs.size ? requestAnimationFrame(loop) : 0;
 }
@@ -20,6 +22,7 @@ export function onFrame(cb: Cb): () => void {
   cbs.add(cb);
   if (!raf) {
     last = 0;
+    fold.reset();
     raf = requestAnimationFrame(loop);
   }
   return () => {

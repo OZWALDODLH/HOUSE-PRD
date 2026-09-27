@@ -76,6 +76,20 @@ pub mod st {
     pub const BAR_IN_SECTION: usize = 54;
 }
 
+/// Folds a newer status snapshot into `acc`, for hosts that read snapshots
+/// less often than the engine writes them: the newest position and levels,
+/// the highest peaks and every trigger since `acc` was last read.
+pub fn merge_status(acc: &mut [f32; STATUS_LEN], next: &[f32; STATUS_LEN]) {
+    for (i, (a, n)) in acc.iter_mut().zip(next).enumerate() {
+        *a = match i {
+            st::TRIGGERS => ((*a as u32) | (*n as u32)) as f32,
+            st::PEAK_L..=st::HAT => a.max(*n),
+            _ if (st::TRACK_PEAKS..st::TRACK_PEAKS + MAX_TRACKS).contains(&i) => a.max(*n),
+            _ => *n,
+        };
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Step {
     pub on: bool,

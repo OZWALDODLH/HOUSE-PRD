@@ -177,6 +177,18 @@ fn note_at(a: &[f64], i: usize) -> i8 {
     }
 }
 
+/// Eight instrument knobs starting at `from`, each 0..1. Missing ones stay
+/// centered and non-finite ones become 0, so NaN never reaches the audio.
+fn params_at(a: &[f64], from: usize) -> [f32; 8] {
+    let mut params = [0.5f32; 8];
+    for (i, p) in params.iter_mut().enumerate() {
+        if a.len() > from + i {
+            *p = f_at(a, from + i).clamp(0.0, 1.0);
+        }
+    }
+    params
+}
+
 /// Decodes one command. Returns `None` for unknown or malformed input, so a
 /// bad message can never crash the audio thread.
 pub fn decode(a: &[f64]) -> Option<Command> {
@@ -246,42 +258,26 @@ pub fn decode(a: &[f64]) -> Option<Command> {
             bar: a.get(1).copied().unwrap_or(0.0).max(0.0) as u32,
         },
         op::ALL_NOTES_OFF => Command::AllNotesOff,
-        op::PREVIEW => {
-            let mut params = [0.5f32; 8];
-            for (i, p) in params.iter_mut().enumerate() {
-                if let Some(v) = a.get(5 + i) {
-                    *p = (*v as f32).clamp(0.0, 1.0);
-                }
-            }
-            Command::Preview {
-                kind: u8_at(a, 1),
-                model: u8_at(a, 2),
-                note: u8_at(a, 3),
-                vel: f_at(a, 4),
-                params,
-            }
-        }
+        op::PREVIEW => Command::Preview {
+            kind: u8_at(a, 1),
+            model: u8_at(a, 2),
+            note: u8_at(a, 3),
+            vel: f_at(a, 4),
+            params: params_at(a, 5),
+        },
         op::SET_SAMPLE_SLOT => Command::SetSampleSlot {
             track: u8_at(a, 1),
             slot: u8_at(a, 2),
         },
         op::CLEAR_STEPS => Command::ClearSteps { track: u8_at(a, 1) },
-        op::SHOT => {
-            let mut params = [0.5f32; 8];
-            for (i, p) in params.iter_mut().enumerate() {
-                if let Some(v) = a.get(6 + i) {
-                    *p = (*v as f32).clamp(0.0, 1.0);
-                }
-            }
-            Command::Shot {
-                kind: u8_at(a, 1),
-                model: u8_at(a, 2),
-                note: u8_at(a, 3),
-                vel: f_at(a, 4),
-                slot: u8_at(a, 5),
-                params,
-            }
-        }
+        op::SHOT => Command::Shot {
+            kind: u8_at(a, 1),
+            model: u8_at(a, 2),
+            note: u8_at(a, 3),
+            vel: f_at(a, 4),
+            slot: u8_at(a, 5),
+            params: params_at(a, 6),
+        },
         _ => return None,
     })
 }
@@ -307,6 +303,26 @@ mod tests {
                 accent: true,
                 slide: false,
                 notes: [57, -1, -1, -1]
+            }
+        );
+    }
+
+    #[test]
+    fn decodes_shot_with_safe_params() {
+        let c = decode(&[22.0, 1.0, 3.0, 60.0, 0.9, 4.0, 0.2, f64::NAN, 7.0]).unwrap();
+        let mut params = [0.5f32; 8];
+        params[0] = 0.2;
+        params[1] = 0.0;
+        params[2] = 1.0;
+        assert_eq!(
+            c,
+            Command::Shot {
+                kind: 1,
+                model: 3,
+                note: 60,
+                vel: 0.9,
+                slot: 4,
+                params
             }
         );
     }
