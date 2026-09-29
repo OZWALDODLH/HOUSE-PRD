@@ -1,8 +1,11 @@
 // The computer keyboard as an instrument, plus the global shortcuts.
 import { releaseAll, togglePlay } from '../engine/audio';
-import { getProject, redo, undo } from '../state/store';
-import { closeDialog, openDialog, toast, useUi } from '../state/ui';
+import { duplicateTrack, getProject, redo, undo } from '../state/store';
+import { closeDialog, openDialog, toast, useUi, type Tab } from '../state/ui';
 import { saveNow } from '../state/persist';
+import { newBlankProject, saveProjectFile } from '../state/actions';
+import { importAudio, useAudioEdit } from '../state/audioEdit';
+import { endTour, useTour } from '../tutorial/tour';
 import { BANK_A, BANK_B, PIANO, SCALE_DEGREE, SOUNDBOARD_CODES } from './keys';
 import { hitNote, hitShot, hitTrack, releaseNote, releaseTrack, scaleNote } from './play';
 import { releaseEverything } from './pressed';
@@ -100,8 +103,21 @@ function noteUp(code: string): void {
 export function installKeyboard(): () => void {
   const down = (e: KeyboardEvent) => {
     const ui = useUi.getState();
+    // The audio editor handles its own keys (Space listens to the part).
+    if (useAudioEdit.getState().source) return;
+    if (useTour.getState().picker) {
+      if (e.code === 'Escape') endTour();
+      return;
+    }
     if (e.code === 'Escape' && ui.dialog) {
       closeDialog();
+      return;
+    }
+    // F1 to F4 switch views even while typing in a search box.
+    const view = VIEW_KEYS[e.code];
+    if (view && ui.screen === 'estudio' && !ui.dialog) {
+      e.preventDefault();
+      ui.set({ tab: view });
       return;
     }
     if (isTyping(e.target)) {
@@ -109,20 +125,12 @@ export function installKeyboard(): () => void {
       return;
     }
     if (e.ctrlKey || e.metaKey) {
-      if (e.code === 'KeyZ' && !e.shiftKey) {
-        e.preventDefault();
-        if (!undo()) toast('No hay nada que deshacer.', 'info', 1600);
-      } else if ((e.code === 'KeyZ' && e.shiftKey) || e.code === 'KeyY') {
-        e.preventDefault();
-        if (!redo()) toast('No hay nada que rehacer.', 'info', 1600);
-      } else if (e.code === 'KeyS') {
-        e.preventDefault();
-        const ok = saveNow();
-        toast(ok ? 'Proyecto guardado.' : 'No pude guardar: tu navegador no deja usar el almacenamiento.', ok ? 'bien' : 'error');
-      } else if (e.code === 'KeyE' && ui.screen === 'estudio') {
-        e.preventDefault();
-        openDialog('exportar');
-      }
+      if (shortcut(e, ui.screen)) e.preventDefault();
+      return;
+    }
+    if (e.code === 'F12') {
+      e.preventDefault();
+      openDialog('atajos');
       return;
     }
     if (ui.dialog) {
@@ -150,17 +158,14 @@ export function installKeyboard(): () => void {
       }
       return;
     }
-    if (e.code === 'F1' || e.code === 'F3') {
-      e.preventDefault();
-      ui.set({ tab: e.code === 'F1' ? 'patron' : 'mezcla' });
-      return;
-    }
     if (e.code === 'F6') {
       e.preventDefault();
       openVisuals();
       return;
     }
     if (e.altKey || !ui.keyboardOn) return;
+    // With a menu open, letters choose in the menu, not play notes.
+    if (document.querySelector('[role="menu"]')) return;
     if (e.repeat) {
       if (held.has(e.code) || (ui.kbMode === 'soundboard' && SOUNDBOARD_CODES.has(e.code))) e.preventDefault();
       return;
@@ -177,6 +182,62 @@ export function installKeyboard(): () => void {
     window.removeEventListener('keyup', up);
     window.removeEventListener('blur', blur);
   };
+}
+
+const VIEW_KEYS: Record<string, Tab> = { F1: 'patron', F2: 'arreglo', F3: 'mezcla', F4: 'piano' };
+
+/** Ctrl (⌘ on Mac) shortcuts of the menus. Returns true when one was used. */
+function shortcut(e: KeyboardEvent, screen: 'inicio' | 'estudio'): boolean {
+  const studio = screen === 'estudio';
+  switch (e.code) {
+    case 'KeyZ':
+      if (!studio) return false;
+      if (e.shiftKey) {
+        if (!redo()) toast('No hay nada que rehacer.', 'info', 1600);
+      } else if (!undo()) toast('No hay nada que deshacer.', 'info', 1600);
+      return true;
+    case 'KeyY':
+      if (!studio) return false;
+      if (!redo()) toast('No hay nada que rehacer.', 'info', 1600);
+      return true;
+    case 'KeyS':
+      if (!studio) return false;
+      if (e.shiftKey) void saveProjectFile(getProject());
+      else {
+        const ok = saveNow();
+        toast(ok ? 'Proyecto guardado.' : 'No pude guardar: tu navegador no deja usar el almacenamiento.', ok ? 'bien' : 'error');
+      }
+      return true;
+    case 'KeyE':
+      if (!studio) return false;
+      openDialog('exportar');
+      return true;
+    case 'KeyN':
+      newBlankProject();
+      return true;
+    case 'KeyO':
+      openDialog('proyectos');
+      return true;
+    case 'KeyI':
+      if (!studio) return false;
+      void importAudio();
+      return true;
+    case 'KeyR':
+      if (!studio || e.shiftKey) return false;
+      openDialog('grabar');
+      return true;
+    case 'KeyD': {
+      if (!studio) return false;
+      const id = useUi.getState().selected;
+      if (!id) return true;
+      const copy = duplicateTrack(id);
+      if (copy) useUi.getState().set({ selected: copy });
+      else toast('Ya tienes 32 pistas. Borra una para duplicar.', 'error');
+      return true;
+    }
+    default:
+      return false;
+  }
 }
 
 export function releaseKeys(): void {

@@ -11,6 +11,8 @@ import { INK, Pict } from './Pict';
 import { Menu } from './Menu';
 import { Icon } from './Icon';
 import { Knob, Seg, Switch } from './controls';
+import { EfectosPista } from './Efectos';
+import { openAudioEditorForTrack } from '../state/audioEdit';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -42,8 +44,8 @@ export function Instrumento() {
   const [side, setSide] = useState<'sonido' | 'efectos'>('sonido');
   if (!t) {
     return (
-      <div className="instrumento surco-r">
-        <p style={{ color: 'var(--tinta-2)', margin: 0 }}>Agrega un sonido de la lista para empezar.</p>
+      <div className="instrumento vacio-inst">
+        <p>Agrega un sonido del navegador para empezar: doble clic en uno o arrástralo a las pistas.</p>
       </div>
     );
   }
@@ -55,32 +57,41 @@ export function Instrumento() {
   const ink = INK[t.family];
   const isSource = p.sidechainTrack === t.id;
   const index = p.tracks.findIndex((x) => x.id === t.id);
+  const fxCount = t.fx.filter((f) => f.kind).length;
 
   return (
-    <div className="instrumento surco-r">
+    <div className="instrumento" data-tour="instrumento">
       <div className="cab-inst">
-        <Pict pict={t.pict} family={t.family} size={34} />
+        <Pict pict={t.pict} family={t.family} size={28} />
         <h3>{t.kind === 'drum' ? t.name : INSTRUMENT_NAME[t.kind]}</h3>
-        <div className="preset" aria-label="Preset">
+        <div className="preset" aria-label="Preset" data-tour="preset">
           <button onClick={() => step(-1)} aria-label="Preset anterior" disabled={names.length < 2}>
             <Icon name="izq" size={12} />
           </button>
-          <span>{t.preset}</span>
+          <span title={t.preset}>{t.preset}</span>
           <button onClick={() => step(1)} aria-label="Preset siguiente" disabled={names.length < 2}>
             <Icon name="der" size={12} />
           </button>
         </div>
-        <button
-          className="btn chico"
-          onClick={() => {
-            rollDice(t.id);
-            toast(`Nuevo patrón para ${t.name}. Ctrl+Z para regresar.`, 'info', 2400);
-          }}
-          title="Genera un patrón nuevo dentro del estilo y la escala"
-        >
-          <Icon name="dados" size={14} />
-          Dados
-        </button>
+        {t.kind === 'sampler' ? (
+          <button className="btn chico" onClick={() => openAudioEditorForTrack(t.id)} title="Elige otra parte del audio, suavízalo o ponlo al revés" data-tour="editar-audio">
+            <Icon name="tijeras" size={14} />
+            Editar audio
+          </button>
+        ) : (
+          <button
+            className="btn chico"
+            onClick={() => {
+              rollDice(t.id);
+              toast(`Nuevo patrón para ${t.name}. Ctrl+Z para regresar.`, 'info', 2400);
+            }}
+            title="Genera un patrón nuevo dentro del estilo y la escala"
+            data-tour="dados"
+          >
+            <Icon name="dados" size={14} />
+            Dados
+          </button>
+        )}
         <LargoPista t={t} />
         <Menu label={<>Pista <Icon name="abajo" size={12} /></>} title="Mover, duplicar o borrar esta pista" align="right" wrap="empuja">
           {(close) => (
@@ -126,7 +137,7 @@ export function Instrumento() {
             </>
           )}
         </Menu>
-        {pro && (
+        <div data-tour="lado-efectos">
           <Seg
             small
             label="Qué ajustas"
@@ -134,15 +145,18 @@ export function Instrumento() {
             onChange={setSide}
             options={[
               { id: 'sonido', text: 'Sonido' },
-              { id: 'efectos', text: 'Efectos' },
+              { id: 'efectos', text: fxCount ? `Efectos (${fxCount})` : 'Efectos' },
             ]}
           />
-        )}
+        </div>
       </div>
       <div className="cuerpo-inst">
         <div className="col-perillas">
-          {pro && side === 'efectos' ? (
-            <Efectos t={t} />
+          {side === 'efectos' ? (
+            <>
+              <EfectosPista t={t} />
+              <Efectos t={t} pro={pro} />
+            </>
           ) : (
             <div className="perillas">
               {shown.map((m, i) => {
@@ -164,7 +178,7 @@ export function Instrumento() {
               })}
             </div>
           )}
-          {!(pro && side === 'efectos') && (
+          {side !== 'efectos' && (
             <div className="bombeo">
               <svg width="46" height="22" viewBox="0 0 46 22" aria-hidden="true">
                 <path d="M1 20 L1 4 Q4 20 11 20 L12 4 Q15 20 22 20 L23 4 Q26 20 33 20 L34 4 Q37 20 44 20" fill="none" stroke={ink} strokeWidth="2" />
@@ -189,7 +203,7 @@ export function Instrumento() {
             </div>
           )}
         </div>
-        <Visor t={t} ink={ink} />
+        {side !== 'efectos' && <Visor t={t} ink={ink} />}
       </div>
     </div>
   );
@@ -218,7 +232,7 @@ function LargoPista({ t }: { t: Track }) {
   );
 }
 
-function Efectos({ t }: { t: Track }) {
+function Efectos({ t, pro }: { t: Track; pro: boolean }) {
   const ink = INK[t.family];
   const setEq = (band: number, v: number) => {
     const eq = [...t.eq] as Track['eq'];
@@ -226,15 +240,19 @@ function Efectos({ t }: { t: Track }) {
     setTrack(t.id, { eq }, `eq:${t.id}:${band}`);
   };
   return (
-    <div className="perillas" style={{ maxWidth: 560 }}>
-      <Knob label="Filtro" pro="DJ filter" showPro size="m" bipolar value={t.filter} def={0.5} ink={ink} text={filterText(t.filter)} onChange={(v) => setTrack(t.id, { filter: Math.abs(v - 0.5) < 0.015 ? 0.5 : v })} />
-      <Knob label="Graves" pro="low shelf" showPro size="m" bipolar value={eqToKnob(t.eq[0])} def={0.5} ink={ink} text={eqText(t.eq[0])} onChange={(v) => setEq(0, v)} />
-      <Knob label="Medios" pro="mid bell" showPro size="m" bipolar value={eqToKnob(t.eq[1])} def={0.5} ink={ink} text={eqText(t.eq[1])} onChange={(v) => setEq(1, v)} />
-      <Knob label="Agudos" pro="high shelf" showPro size="m" bipolar value={eqToKnob(t.eq[2])} def={0.5} ink={ink} text={eqText(t.eq[2])} onChange={(v) => setEq(2, v)} />
-      <Knob label="Saturación" pro="drive" showPro size="m" value={t.drive} def={0} ink={ink} text={pct(t.drive)} onChange={(drive) => setTrack(t.id, { drive })} />
-      <Knob label="Espacio" pro="reverb" showPro size="m" value={t.sendRev} def={0} ink={ink} text={pct(t.sendRev)} onChange={(sendRev) => setTrack(t.id, { sendRev })} />
-      <Knob label="Eco" pro="delay" showPro size="m" value={t.sendDel} def={0} ink={ink} text={pct(t.sendDel)} onChange={(sendDel) => setTrack(t.id, { sendDel })} />
-      <Knob label="Paneo" pro="pan" showPro size="m" bipolar value={(t.pan + 1) / 2} def={0.5} ink={ink} text={panText(t.pan)} onChange={(v) => setTrack(t.id, { pan: Math.round((v * 2 - 1) * 100) / 100 })} />
+    <div className="perillas canal-perillas" aria-label="Canal de la pista">
+      <Knob label="Filtro" pro="DJ filter" showPro={pro} size="s" bipolar value={t.filter} def={0.5} ink={ink} text={filterText(t.filter)} onChange={(v) => setTrack(t.id, { filter: Math.abs(v - 0.5) < 0.015 ? 0.5 : v })} />
+      {pro && (
+        <>
+          <Knob label="Graves" pro="low shelf" showPro size="s" bipolar value={eqToKnob(t.eq[0])} def={0.5} ink={ink} text={eqText(t.eq[0])} onChange={(v) => setEq(0, v)} />
+          <Knob label="Medios" pro="mid bell" showPro size="s" bipolar value={eqToKnob(t.eq[1])} def={0.5} ink={ink} text={eqText(t.eq[1])} onChange={(v) => setEq(1, v)} />
+          <Knob label="Agudos" pro="high shelf" showPro size="s" bipolar value={eqToKnob(t.eq[2])} def={0.5} ink={ink} text={eqText(t.eq[2])} onChange={(v) => setEq(2, v)} />
+          <Knob label="Saturación" pro="drive" showPro size="s" value={t.drive} def={0} ink={ink} text={pct(t.drive)} onChange={(drive) => setTrack(t.id, { drive })} />
+        </>
+      )}
+      <Knob label="Espacio" pro="reverb" showPro={pro} size="s" value={t.sendRev} def={0} ink={ink} text={pct(t.sendRev)} onChange={(sendRev) => setTrack(t.id, { sendRev })} />
+      <Knob label="Eco" pro="delay" showPro={pro} size="s" value={t.sendDel} def={0} ink={ink} text={pct(t.sendDel)} onChange={(sendDel) => setTrack(t.id, { sendDel })} />
+      <Knob label="Paneo" pro="pan" showPro={pro} size="s" bipolar value={(t.pan + 1) / 2} def={0.5} ink={ink} text={panText(t.pan)} onChange={(v) => setTrack(t.id, { pan: Math.round((v * 2 - 1) * 100) / 100 })} />
     </div>
   );
 }
@@ -243,12 +261,24 @@ function Efectos({ t }: { t: Track }) {
 
 function Visor({ t, ink }: { t: Track; ink: string }) {
   const { label, path } = useMemo(() => drawFor(t), [t]);
+  if (t.kind === 'sampler') {
+    return (
+      <button className="visor" aria-label={`${label}. Clic para editar el audio`} title="Clic para elegir otra parte del audio" onClick={() => openAudioEditorForTrack(t.id)}>
+        <span className="et">{label}</span>
+        <svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
+          <path d={`${path} L300 120 L0 120Z`} fill={ink} opacity=".12" />
+          <path d={path} fill="none" stroke={ink} strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          <rect x={(t.params[4] ?? 0) * 300} y="0" width={Math.max(1, ((t.params[5] ?? 1) - (t.params[4] ?? 0)) * 300)} height="120" fill={ink} opacity=".14" />
+        </svg>
+      </button>
+    );
+  }
   return (
     <div className="visor" aria-label={label}>
       <span className="et">{label}</span>
       <svg viewBox="0 0 300 120" preserveAspectRatio="none" aria-hidden="true">
         <path d={`${path} L300 120 L0 120Z`} fill={ink} opacity=".12" />
-        <path d={path} fill="none" stroke={ink} strokeWidth="3" vectorEffect="non-scaling-stroke" />
+        <path d={path} fill="none" stroke={ink} strokeWidth="2" vectorEffect="non-scaling-stroke" />
       </svg>
     </div>
   );

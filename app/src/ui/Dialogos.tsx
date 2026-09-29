@@ -5,10 +5,15 @@ import { MASTER, cmd } from '../engine/protocol';
 import { resync, send, startAudio } from '../engine/audio';
 import { encodeWav, measure, renderBars, renderProject } from '../engine/render';
 import { Mic, listInputs, micError, type Input } from '../engine/mic';
-import { addSamplerTrack, barsToSeconds, formatDuration, patternBars, rename, songBars, useStudio } from '../state/store';
+import { barsToSeconds, formatDuration, patternBars, rename, songBars, useStudio } from '../state/store';
 import { closeDialog, toast, useUi } from '../state/ui';
-import { decodeFile, freeSlot, prepareAudio, putSample } from '../state/samples';
-import { deleteProject, listProjects, openProjectFile, openSaved, projectFile, safeFileName, saveNow } from '../state/persist';
+import { prepareAudio } from '../state/samples';
+import { importAudio, openAudioEditor, useAudioEdit } from '../state/audioEdit';
+import { deleteProject, listProjects, openProjectFile, openSaved, safeFileName, saveNow } from '../state/persist';
+import { newBlankProject, newFromTemplate, saveProjectFile } from '../state/actions';
+import { startTutorial } from '../tutorial/tour';
+import { ListaPlantillas } from './Plantillas';
+import { shortcut } from './MenuBar';
 import { canSaveFiles, saveFile, viewerDownloads } from '../state/files';
 import { genreById } from '../state/templates';
 import { markExported } from '../state/retos';
@@ -26,7 +31,7 @@ export function Dialogo({ title, children, wide }: { title: string; children: Re
   return (
     <div className="velo" onPointerDown={(e) => e.target === e.currentTarget && closeDialog()}>
       <div className={`dialogo${wide ? ' ancho' : ''}`} role="dialog" aria-modal="true" aria-label={title} ref={ref}>
-        <header className="surco-b">
+        <header>
           <h2>{title}</h2>
           <button className="btn icono" data-cerrar onClick={closeDialog} aria-label="Cerrar">
             <Icon name="cerrar" />
@@ -38,14 +43,6 @@ export function Dialogo({ title, children, wide }: { title: string; children: Re
   );
 }
 
-/** The project as a file (.house; .house.json where only JSON can be saved). */
-async function saveProjectFile(p: Parameters<typeof projectFile>[0]): Promise<void> {
-  const inViewer = !!(await viewerDownloads());
-  const res = await saveFile(projectFile(p), `${safeFileName(p.name)}${inViewer ? '.house.json' : '.house'}`);
-  if (res === 'saved') toast('Proyecto guardado en un archivo.', 'bien');
-  else if (res === 'unavailable') toast('Esta vista no deja guardar archivos. Usa la app de escritorio de HOUSE.', 'error', 6000);
-}
-
 export function Dialogos() {
   const d = useUi((s) => s.dialog);
   if (d === 'salidas') return <Salidas />;
@@ -53,6 +50,8 @@ export function Dialogos() {
   if (d === 'grabar') return <Grabar />;
   if (d === 'proyectos') return <Proyectos />;
   if (d === 'atajos') return <Atajos />;
+  if (d === 'plantillas') return <Plantillas />;
+  if (d === 'acerca') return <Acerca />;
   return null;
 }
 
@@ -207,7 +206,7 @@ function Exportar() {
   return (
     <Dialogo title={what === 'cancion' ? 'Exportar canción' : 'Exportar loop'}>
       {hasSong && (
-        <button className={`opcion${what === 'cancion' ? ' sel' : ''}`} onClick={() => setWhat('cancion')} aria-pressed={what === 'cancion'}>
+        <button className={`opcion${what === 'cancion' ? ' sel' : ''}`} onClick={() => setWhat('cancion')} aria-pressed={what === 'cancion'} data-tour="exportar-opciones">
           <Icon name="exportar" />
           <div>
             <b>Canción completa</b>
@@ -270,18 +269,21 @@ function Exportar() {
 
 // --------------------------------------------------------------- grabar --
 
+/** Longest take, in seconds. The editor then picks the part to keep. */
+const MAX_TAKE = 60;
+
 function Grabar() {
   const p = useStudio((s) => s.project);
   const { micId, set } = useUi();
+  const editing = useAudioEdit((s) => s.source !== null);
   const [inputs, setInputs] = useState<Input[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [state, setState] = useState<'abriendo' | 'listo' | 'grabando' | 'toma'>('abriendo');
-  const [take, setTake] = useState<{ data: Float32Array; sr: number } | null>(null);
+  const [take, setTake] = useState<{ data: Float32Array; sr: number; name: string } | null>(null);
   const [secs, setSecs] = useState(0);
   const mic = useRef<Mic | null>(null);
   const level = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const file = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const m = new Mic();
@@ -319,7 +321,7 @@ function Grabar() {
     const id = setInterval(() => {
       const s = (performance.now() - t0) / 1000;
       setSecs(s);
-      if (s >= 20) void stopRec();
+      if (s >= MAX_TAKE) void stopRec();
     }, 100);
     return () => clearInterval(id);
   }, [state]);
@@ -341,6 +343,10 @@ function Grabar() {
     }
   }, [take]);
 
+  const voices = p.tracks.filter((t) => t.family === 'voz').length;
+
+  const trim = (t: NonNullable<typeof take>) => openAudioEditor({ data: t.data, sr: t.sr, name: t.name, family: 'voz' }, { kind: 'nuevo' });
+
   const startRec = () => {
     setTake(null);
     setSecs(0);
@@ -351,60 +357,29 @@ function Grabar() {
     const m = mic.current;
     if (!m) return;
     const raw = await m.stop();
-    const data = prepareAudio([raw], m.sampleRate);
+    const data = prepareAudio([raw], m.sampleRate, MAX_TAKE);
     if (data.length < m.sampleRate * 0.05) {
       setError('No se oyó nada. Acércate al micrófono o súbele el volumen de entrada en tu sistema.');
       setState('listo');
       return;
     }
     setError(null);
-    setTake({ data, sr: m.sampleRate });
+    const t = { data, sr: m.sampleRate, name: `Voz ${voices + 1}` };
+    setTake(t);
     setState('toma');
+    // Straight to the editor: the person picks the part they like.
+    trim(t);
   };
-  const listen = async () => {
-    if (!take) return;
-    const ctx = new AudioContext();
-    const buf = ctx.createBuffer(1, take.data.length, take.sr);
-    buf.copyToChannel(new Float32Array(take.data), 0);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.onended = () => void ctx.close();
-    src.start();
-  };
-  const keepTake = async (data: Float32Array, sr: number, name: string, family: 'voz' | 'samples') => {
-    const slot = freeSlot(p);
-    if (slot < 0 || p.tracks.length >= 16) {
-      toast('Ya tienes 32 pistas. Borra una para agregar tu audio.', 'error');
-      return;
-    }
-    await startAudio();
-    const id = addSamplerTrack(name, slot, family);
-    if (!id) return;
-    await putSample(p.id, slot, { data, sr, name });
-    set({ selected: id, dialog: null });
-    toast(`Listo: “${name}” está en un pad. Prende sus pasos o tócalo con tu teclado.`, 'bien', 4000);
-  };
-  const onFile = async (f: File | undefined) => {
-    if (!f) return;
-    try {
-      const { data, sr } = await decodeFile(f);
-      await keepTake(data, sr, f.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'Sample', 'samples');
-    } catch {
-      setError('No pude abrir ese archivo. Prueba con WAV, MP3, OGG o M4A.');
-    }
-  };
-
-  const voices = p.tracks.filter((t) => t.family === 'voz').length;
 
   return (
     <Dialogo title="Grabar voz o sonido">
       <div
-        style={{ display: 'contents' }}
+        className="grabar"
+        inert={editing}
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
-          void onFile(e.dataTransfer.files[0]);
+          void importAudio(Array.from(e.dataTransfer.files));
         }}
       >
         <label className="etiqueta" htmlFor="mic">
@@ -424,50 +399,45 @@ function Grabar() {
           <span className="zona" title="Zona buena" />
           <i ref={level} />
         </div>
-        <p>Habla o canta y mira la barra: lo ideal es que llegue al recuadro sin pasarse al final.</p>
+        <p>Habla o canta y mira la barra: lo ideal es que llegue al recuadro sin pasarse al final. Al parar, eliges la parte que más te gusta.</p>
         {error && (
           <div className="aviso error" role="alert">
             {error}
           </div>
         )}
-        {take && <canvas ref={canvas} className="onda-toma" aria-label="Forma de onda de la toma" />}
+        {take && state === 'toma' && <canvas ref={canvas} className="onda-toma" aria-label="Forma de onda de la toma" />}
         <div className="acciones" style={{ justifyContent: 'flex-start' }}>
           {state === 'grabando' ? (
-            <button className="btn rosa grande" onClick={() => void stopRec()}>
-              <Icon name="stop" size={16} />
-              Parar ({secs.toFixed(1)} s)
+            <button className="btn grabar-btn" onClick={() => void stopRec()}>
+              <Icon name="stop" size={14} />
+              Parar <span className="num">{clockOf(secs)} de {clockOf(MAX_TAKE)}</span>
             </button>
           ) : (
-            <button className="btn rosa grande" onClick={startRec} disabled={state === 'abriendo' || !!(error && !take && state !== 'listo')}>
-              <Icon name="rec" size={18} />
+            <button className="btn grabar-btn" onClick={startRec} disabled={state === 'abriendo' || !!(error && !take && state !== 'listo')} data-tour="grabar-toma">
+              <Icon name="rec" size={16} />
               {take ? 'Grabar otra toma' : 'Grabar toma'}
             </button>
           )}
           {take && state === 'toma' && (
-            <>
-              <button className="btn grande" onClick={() => void listen()}>
-                <Icon name="play" size={16} />
-                Escuchar
-              </button>
-              <button className="btn claro grande" onClick={() => void keepTake(take.data, take.sr, `Voz ${voices + 1}`, 'voz')}>
-                <Icon name="listo" size={16} />
-                Usar en un pad
-              </button>
-            </>
+            <button className="btn primario" onClick={() => trim(take)}>
+              <Icon name="tijeras" size={14} />
+              Recortar y usar
+            </button>
           )}
         </div>
         <div className="acciones" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'var(--tinta-3)' }}>¿Ya tienes el audio? Arrástralo aquí o</span>
-          <button className="btn" onClick={() => file.current?.click()}>
-            <Icon name="carpeta" size={16} />
+          <span className="nota">¿Ya tienes el audio? Arrástralo aquí o</span>
+          <button className="btn" onClick={() => void importAudio()}>
+            <Icon name="carpeta" size={14} />
             Importar audio
           </button>
-          <input ref={file} type="file" accept="audio/*,.wav,.mp3,.ogg,.m4a,.flac" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
         </div>
       </div>
     </Dialogo>
   );
 }
+
+const clockOf = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // ------------------------------------------------------------ proyectos --
 
@@ -484,15 +454,12 @@ function Proyectos() {
       </label>
       <input id="nombre" className="campo-texto" defaultValue={p.name} maxLength={48} onBlur={(e) => rename(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
       <div className="acciones" style={{ justifyContent: 'flex-start' }}>
-        <button
-          className="btn"
-          onClick={() => {
-            saveNow();
-            set({ screen: 'inicio', dialog: null });
-          }}
-        >
-          <Icon name="mas" size={16} />
-          Nuevo proyecto
+        <button className="btn" onClick={newBlankProject}>
+          <Icon name="mas" size={14} />
+          Proyecto en blanco
+        </button>
+        <button className="btn" onClick={() => set({ dialog: 'plantillas' })}>
+          Desde plantilla…
         </button>
         <button className="btn" onClick={() => file.current?.click()}>
           <Icon name="carpeta" size={16} />
@@ -519,15 +486,15 @@ function Proyectos() {
           }}
         />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+      <div className="proy-rejilla">
         {list.map((m) => (
-          <div key={m.id} className="proy" style={{ outline: m.id === p.id ? '2px solid var(--tinta)' : undefined, outlineOffset: 2 }}>
+          <div key={m.id} className={`proy${m.id === p.id ? ' abierto' : ''}`}>
             <MiniMarquesina sections={m.sections} />
             <b>{m.name}</b>
             <small>
               {genreById(m.genre).name}, {m.bpm} BPM
             </small>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="proy-acciones">
               <button
                 className="btn chico"
                 disabled={m.id === p.id}
@@ -579,12 +546,21 @@ function Atajos() {
     ['7 a -', 'Notas del bajo o sinte elegido (banco B)'],
     ['Soundboard', 'Cada tecla de letras y números dispara su sonido; clic derecho para cambiarlo'],
     ['Shift + tecla', 'Golpe con acento'],
-    ['Ctrl + Z', 'Deshacer'],
-    ['Ctrl + Shift + Z', 'Rehacer'],
-    ['Ctrl + S', 'Guardar ahora (también se guarda solo)'],
-    ['Ctrl + E', 'Exportar canción'],
-    ['F1 / F3', 'Patrón / Mezcla'],
-    ['F6', 'Visuales'],
+    [shortcut('Ctrl+N'), 'Proyecto en blanco'],
+    [shortcut('Ctrl+O'), 'Abrir de tus proyectos'],
+    [shortcut('Ctrl+S'), 'Guardar ahora (también se guarda solo)'],
+    [shortcut('Ctrl+Shift+S'), 'Guardar como archivo .house'],
+    [shortcut('Ctrl+I'), 'Importar audio'],
+    [shortcut('Ctrl+R'), 'Grabar voz o sonido'],
+    [shortcut('Ctrl+E'), 'Exportar canción'],
+    [shortcut('Ctrl+Z'), 'Deshacer'],
+    [shortcut('Ctrl+Shift+Z'), 'Rehacer'],
+    [shortcut('Ctrl+D'), 'Duplicar la pista elegida'],
+    ['F1 F2 F3 F4', 'Patrón, Arreglo, Mezcla y Piano roll'],
+    ['F6', 'Visuales en otra ventana'],
+    ['F12', 'Esta lista'],
+    ['Flechas en la regla', 'Mover el cabezal un tiempo (con Shift, un compás)'],
+    ['Supr en el piano roll', 'Borrar la nota elegida'],
     ['Esc', 'Cerrar ventanas y soltar el foco'],
   ];
   return (
@@ -596,6 +572,49 @@ function Atajos() {
             <span>{v}</span>
           </div>
         ))}
+      </div>
+    </Dialogo>
+  );
+}
+
+// ----------------------------------------------------------- plantillas --
+
+function Plantillas() {
+  return (
+    <Dialogo title="Nuevo proyecto desde plantilla" wide>
+      <p>Cada plantilla ya suena: trae batería, bajo, acordes y una estructura de canción. Escúchalas con el botón redondo y crea la que más te guste.</p>
+      <ListaPlantillas onCreate={(g) => newFromTemplate(g)} />
+    </Dialogo>
+  );
+}
+
+// ---------------------------------------------------------------- acerca --
+
+function Acerca() {
+  return (
+    <Dialogo title="Acerca de HOUSE">
+      <p>
+        <b>HOUSE</b> es un estudio para hacer música electrónica, urbana y latina aunque nunca hayas estudiado música: patrones, piano roll con acordes, arreglo con
+        curvas, mezcla con efectos, voz y visuales para tu set.
+      </p>
+      <p>Tus proyectos se guardan en esta computadora. Nada se sube a internet.</p>
+      <p>
+        Tipografías: Big Shoulders y Atkinson Hyperlegible Next (licencia OFL). El motor de audio está hecho en Rust para HOUSE.
+      </p>
+      <div className="acciones">
+        <button
+          className="btn"
+          onClick={() => {
+            closeDialog();
+            startTutorial();
+          }}
+        >
+          <Icon name="libro" size={14} />
+          Abrir el tutorial
+        </button>
+        <button className="btn" onClick={closeDialog}>
+          Cerrar
+        </button>
       </div>
     </Dialogo>
   );

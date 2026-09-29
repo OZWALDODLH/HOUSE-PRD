@@ -125,6 +125,62 @@ const SHAPES: Record<PictId, JSX.Element> = {
       <rect x="21" y="12" width="2" height="4" fill={N} />
     </>
   ),
+  tom: (
+    <>
+      <path d="M7 8h14v11c0 1.6-3.1 2.8-7 2.8S7 20.6 7 19z" fill={N} />
+      <ellipse cx="14" cy="8" rx="7" ry="2.4" fill={N} />
+      <ellipse cx="14" cy="8" rx="5" ry="1.2" fill="currentColor" />
+      <rect x="8" y="20" width="2" height="5" fill={N} />
+      <rect x="18" y="20" width="2" height="5" fill={N} />
+    </>
+  ),
+  chasquido: (
+    <>
+      <circle cx="11" cy="17" r="5.5" fill={N} />
+      <rect x="10.8" y="3" width="2.4" height="6" transform="rotate(-12 12 6)" fill={N} />
+      <rect x="17" y="5" width="2.4" height="6" transform="rotate(35 18.2 8)" fill={N} />
+      <rect x="19" y="12" width="6" height="2.4" transform="rotate(-8 22 13.2)" fill={N} />
+    </>
+  ),
+  clave: (
+    <>
+      <rect x="12.3" y="3" width="3.4" height="22" rx="1.7" transform="rotate(-38 14 14)" fill={N} />
+      <rect x="12.3" y="3" width="3.4" height="22" rx="1.7" transform="rotate(38 14 14)" fill={N} />
+    </>
+  ),
+  pandero: (
+    <>
+      <circle cx="14" cy="14" r="8" fill="none" stroke={N} strokeWidth="3" />
+      <rect x="12" y="3.5" width="4" height="3" fill={N} />
+      <rect x="12" y="21.5" width="4" height="3" fill={N} />
+      <rect x="3.5" y="12" width="3" height="4" fill={N} />
+      <rect x="21.5" y="12" width="3" height="4" fill={N} />
+    </>
+  ),
+  bongo: (
+    <>
+      <path d="M3 9h10l-2 13H5z" fill={N} />
+      <path d="M15 11h10l-2 11h-6z" fill={N} />
+      <rect x="11" y="14" width="6" height="2.5" fill={N} />
+    </>
+  ),
+  bajada: <path d="M5 7 L23 21 L5 21 Z" fill={N} />,
+  laser: <path d="M17 3 L8 15.5 H13.5 L11 25 L20.5 12 H15 Z" fill={N} />,
+  corneta: (
+    <>
+      <path d="M4 11h5l13-6.5v19L9 17H4z" fill={N} />
+      <rect x="6" y="17" width="3" height="5" fill={N} />
+    </>
+  ),
+  guitarra: (
+    <>
+      <circle cx="10.5" cy="18.5" r="6" fill={N} />
+      <circle cx="14.5" cy="13.5" r="4.3" fill={N} />
+      <rect x="16" y="2.5" width="3" height="13" transform="rotate(40 17.5 9)" fill={N} />
+      <circle cx="10.5" cy="18.5" r="2" fill="currentColor" />
+    </>
+  ),
+  sierra: <path d="M3 20 L10 8 L10 20 L17 8 L17 20 L24 8 L24 20" fill="none" stroke={N} strokeWidth="3" strokeLinejoin="miter" />,
 };
 
 interface Props {

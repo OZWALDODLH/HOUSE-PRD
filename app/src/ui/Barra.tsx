@@ -1,56 +1,30 @@
-// Top bar: project, transport, position, tempo, key, swing, mode, outputs, speaker.
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+// Toolbar: transport, position, tempo, key, swing, loop or song, metronome,
+// undo, easy or pro, the musical keyboard and the master level.
+import { useRef, useState, type PointerEvent } from 'react';
 import { ST } from '../engine/protocol';
 import { useLive } from '../engine/live';
 import { play, startAudio, stop } from '../engine/audio';
 import { NOTE_NAMES, keyName } from '../state/model';
-import { redo, setBpm, setKey, setMetronome, setSwing, undo, useStudio } from '../state/store';
-import { genreById } from '../state/templates';
-import { openDialog, useUi } from '../state/ui';
+import { redo, setBpm, setKey, setMetronome, setMode, setSwing, undo, useStudio } from '../state/store';
+import { KB_MODE_NAME, useUi } from '../state/ui';
 import { Icon } from './Icon';
-import { Bocina, Meter, Seg } from './controls';
+import { Meter, Seg } from './controls';
 import { Menu } from './Menu';
-
-function useAgo(t: number): string {
-  const [, tick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => tick((x) => x + 1), 5000);
-    return () => clearInterval(id);
-  }, []);
-  if (t < 0) return 'sin guardar';
-  if (!t) return 'guardado';
-  const s = Math.round((Date.now() - t) / 1000);
-  if (s < 5) return 'guardado ahora';
-  if (s < 60) return `guardado hace ${s - (s % 5)} s`;
-  const m = Math.round(s / 60);
-  return `guardado hace ${m} min`;
-}
 
 export function Barra() {
   const p = useStudio((s) => s.project);
   const canUndo = useStudio((s) => s.past.length > 0);
   const canRedo = useStudio((s) => s.future.length > 0);
-  const { pro, set, savedAt, recArmed } = useUi();
+  const { pro, set, recArmed, keyboardOn, kbMode } = useUi();
   const playing = useLive((s) => s[ST.PLAYING] > 0.5);
-  const ago = useAgo(savedAt);
   return (
-    <header className="top surco-b">
-      <button className="logo" onClick={() => set({ screen: 'inicio' })} title="Ir a Inicio">
-        HOUSE
-      </button>
-      <button className="proyecto" onClick={() => openDialog('proyectos')} title="Tus proyectos">
-        <b>{p.name}</b>
-        <span>
-          {genreById(p.genre).name}, {ago}
-        </span>
-      </button>
-      <div className="sep" />
-      <div className="transporte">
-        <button className="btn icono" onClick={() => stop()} aria-label="Parar" title="Parar (Espacio)">
-          <Icon name="stop" size={16} />
+    <header className="herramientas">
+      <div className="grupo-h transporte" data-tour="transporte">
+        <button className="btn icono" onClick={() => stop()} aria-label="Parar y regresar al inicio" title="Parar (Espacio)">
+          <Icon name="stop" size={14} />
         </button>
         <button
-          className={`btn icono${playing ? ' on' : ''}`}
+          className={`btn icono play${playing ? ' on' : ''}`}
           onClick={() => {
             if (playing) stop();
             else {
@@ -58,11 +32,11 @@ export function Barra() {
               void play();
             }
           }}
-          aria-label={playing ? 'Pausar' : 'Reproducir'}
+          aria-label={playing ? 'Parar' : 'Reproducir'}
           aria-pressed={playing}
           title="Reproducir o parar (Espacio)"
         >
-          <Icon name="play" size={18} />
+          <Icon name="play" size={16} />
         </button>
         <button
           className={`btn icono${recArmed ? ' grabando' : ''}`}
@@ -71,68 +45,92 @@ export function Barra() {
             void startAudio();
           }}
           aria-pressed={recArmed}
+          data-tour="grabar-pads"
           aria-label="Grabar lo que tocas"
           title="Grabar lo que tocas en los pads mientras suena"
         >
-          <Icon name="rec" size={18} />
+          <Icon name="rec" size={16} />
         </button>
       </div>
-      <Posicion />
+      <Posicion bpm={p.bpm} />
       <Tempo bpm={p.bpm} />
       <Tonalidad />
       <Swing swing={p.swing} />
+      <div data-tour="modo">
+        <Seg
+          small
+          label="Qué suena al reproducir"
+          value={p.mode}
+          onChange={(m) => setMode(m)}
+          options={[
+            { id: 'patron', text: 'Loop', title: 'Repite el patrón una y otra vez' },
+            { id: 'cancion', text: 'Canción', title: 'Toca las secciones de la línea de tiempo, de principio a fin' },
+          ]}
+        />
+      </div>
       <button className={`btn icono${p.metronome ? ' on' : ''}`} onClick={() => setMetronome(!p.metronome)} aria-pressed={p.metronome} aria-label="Metrónomo" title="Metrónomo">
-        <Icon name="metronomo" />
+        <Icon name="metronomo" size={16} />
       </button>
       <div className="espacio" />
-      <button className="btn icono" onClick={() => undo()} disabled={!canUndo} aria-label="Deshacer" title="Deshacer (Ctrl+Z)">
-        <Icon name="deshacer" />
+      <button
+        className={`teclado-musical${keyboardOn ? ' on' : ''}`}
+        onClick={() => set({ keyboardOn: !keyboardOn })}
+        aria-pressed={keyboardOn}
+        title="Tab prende o apaga el teclado musical"
+        data-tour="teclado-musical"
+      >
+        <i aria-hidden="true" />
+        {keyboardOn ? `Teclado: ${KB_MODE_NAME[kbMode]}` : 'Teclado apagado'}
       </button>
-      <button className="btn icono" onClick={() => redo()} disabled={!canRedo} aria-label="Rehacer" title="Rehacer (Ctrl+Shift+Z)">
-        <Icon name="rehacer" />
-      </button>
-      <Seg
-        label="Modo"
-        value={pro ? 'pro' : 'facil'}
-        onChange={(v) => set({ pro: v === 'pro' })}
-        options={[
-          { id: 'facil', text: 'Fácil' },
-          { id: 'pro', text: 'Pro' },
-        ]}
-      />
-      <Salidas />
-      <div className="bocina" aria-label="Nivel maestro">
-        <Bocina />
-        <div className="vu" aria-hidden="true">
-          <Meter read={(s) => s[ST.PEAK_L]} />
-          <Meter read={(s) => s[ST.PEAK_R]} />
-        </div>
+      <div className="grupo-h">
+        <button className="btn icono" onClick={() => undo()} disabled={!canUndo} aria-label="Deshacer" title="Deshacer (Ctrl+Z)">
+          <Icon name="deshacer" size={16} />
+        </button>
+        <button className="btn icono" onClick={() => redo()} disabled={!canRedo} aria-label="Rehacer" title="Rehacer (Ctrl+Shift+Z)">
+          <Icon name="rehacer" size={16} />
+        </button>
+      </div>
+      <div data-tour="facil-pro">
+        <Seg
+          small
+          label="Modo"
+          value={pro ? 'pro' : 'facil'}
+          onChange={(v) => set({ pro: v === 'pro' })}
+          options={[
+            { id: 'facil', text: 'Fácil', title: 'Solo las perillas principales' },
+            { id: 'pro', text: 'Pro', title: 'Todas las perillas y efectos' },
+          ]}
+        />
+      </div>
+      <div className="nivel-master" aria-label="Nivel del master" data-tour="nivel">
+        <Meter read={(s) => s[ST.PEAK_L]} segments={20} label="Nivel izquierdo" />
+        <Meter read={(s) => s[ST.PEAK_R]} segments={20} label="Nivel derecho" />
       </div>
     </header>
   );
 }
 
-function Posicion() {
-  const step = useLive((s) => (s[ST.PLAYING] > 0.5 ? s[ST.STEP] : 0));
+const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
+
+function Posicion({ bpm }: { bpm: number }) {
+  const step = useLive((s) => s[ST.STEP]);
   const bar = Math.floor(step / 16) + 1;
   const beat = Math.floor((step % 16) / 4) + 1;
   const sub = (step % 4) + 1;
+  const sec = (step * 60) / bpm / 4;
+  const cells = String(bar).padStart(3, ' ').split('');
   return (
-    <div className="lcd" aria-label={`Compás ${bar}, tiempo ${beat}`}>
-      <div>
-        <small>Compás</small>
-        <span className="n" style={{ minWidth: '2.4ch' }}>
-          {bar}
-        </span>
-      </div>
-      <div>
-        <small>Tiempo</small>
-        <span className="n">{beat}</span>
-      </div>
-      <div>
-        <small>Paso</small>
-        <span className="n">{sub}</span>
-      </div>
+    <div className="lcd" aria-label={`Compás ${bar}, tiempo ${beat}, paso ${sub}`} data-tour="posicion" title="Compás, tiempo y paso">
+      <span className="digitos">
+        {cells.map((d, i) => (
+          <i key={i}>{d.trim()}</i>
+        ))}
+        <em>.</em>
+        <i>{beat}</i>
+        <em>.</em>
+        <i>{sub}</i>
+      </span>
+      <small className="num">{clock(sec)}</small>
     </div>
   );
 }
@@ -161,7 +159,7 @@ function Tempo({ bpm }: { bpm: number }) {
   const drag = useNumberDrag(bpm, (v) => setBpm(Math.round(v)), 0.25);
   const digits = String(Math.round(bpm)).padStart(3, ' ').split('');
   return (
-    <div className="lcd" title="Arrastra para cambiar el tempo, doble clic para escribirlo">
+    <div className="lcd tempo" title="Tempo: arrastra, usa la rueda o doble clic para escribirlo" data-tour="tempo">
       {typing ? (
         <input
           className="bpm-campo"
@@ -181,7 +179,7 @@ function Tempo({ bpm }: { bpm: number }) {
         />
       ) : (
         <div
-          className="bpm"
+          className="digitos arrastre"
           role="slider"
           tabIndex={0}
           aria-label="Tempo"
@@ -214,41 +212,43 @@ function Tempo({ bpm }: { bpm: number }) {
 function Tonalidad() {
   const key = useStudio((s) => s.project.key);
   return (
-    <Menu
-      className="campo"
-      width={280}
-      title="Tonalidad de la canción"
-      label={
-        <>
-          <small>Tonalidad</small>
-          <b>{keyName(key)}</b>
-        </>
-      }
-    >
-      {() => (
-        <>
-          <Seg
-            small
-            label="Escala"
-            value={key.scale}
-            onChange={(scale) => setKey(key.root, scale)}
-            options={[
-              { id: 'menor', text: 'Menor (más oscura)' },
-              { id: 'mayor', text: 'Mayor (más alegre)' },
-            ]}
-          />
-          <div className="menu-rejilla" style={{ marginTop: 6 }}>
-            {NOTE_NAMES.map((n, i) => (
-              <button key={n} role="menuitemradio" aria-checked={key.root === i} className={key.root === i ? 'on' : ''} onClick={() => setKey(i, key.scale)}>
-                {n}
-              </button>
-            ))}
-          </div>
-          <hr />
-          <span style={{ fontSize: 12, color: 'var(--tinta-3)', padding: '2px 6px 4px' }}>Las notas de tus pistas se mueven solas a la nueva tonalidad.</span>
-        </>
-      )}
-    </Menu>
+    <div data-tour="tonalidad">
+      <Menu
+        className="campo"
+        width={280}
+        title="Tonalidad de la canción"
+        label={
+          <>
+            <small>Tonalidad</small>
+            <b>{keyName(key)}</b>
+          </>
+        }
+      >
+        {() => (
+          <>
+            <Seg
+              small
+              label="Escala"
+              value={key.scale}
+              onChange={(scale) => setKey(key.root, scale)}
+              options={[
+                { id: 'menor', text: 'Menor (más oscura)' },
+                { id: 'mayor', text: 'Mayor (más alegre)' },
+              ]}
+            />
+            <div className="menu-rejilla" style={{ marginTop: 6 }}>
+              {NOTE_NAMES.map((n, i) => (
+                <button key={n} role="menuitemradio" aria-checked={key.root === i} className={key.root === i ? 'on' : ''} onClick={() => setKey(i, key.scale)}>
+                  {n}
+                </button>
+              ))}
+            </div>
+            <hr />
+            <span className="nota-menu">Las notas de tus pistas se mueven solas a la nueva tonalidad.</span>
+          </>
+        )}
+      </Menu>
+    </div>
   );
 }
 
@@ -265,6 +265,7 @@ function Swing({ swing }: { swing: number }) {
       aria-valuenow={pct}
       aria-valuetext={`${pct}%`}
       title="Swing: arrastra para darle más o menos balanceo. Doble clic para recto."
+      data-tour="swing"
       onDoubleClick={() => setSwing(0.5)}
       onWheel={(e) => setSwing(swing + (e.deltaY < 0 ? 0.01 : -0.01))}
       onKeyDown={(e) => {
@@ -278,28 +279,6 @@ function Swing({ swing }: { swing: number }) {
     >
       <small>Swing</small>
       <b className="num">{pct}%</b>
-    </button>
-  );
-}
-
-function Salidas() {
-  const outputs = useUi((s) => s.outputs);
-  const two = !!outputs.cue;
-  return (
-    <button className="salidas" onClick={() => openDialog('salidas')} aria-label="Salidas de audio" title="Elige por dónde suena">
-      <span>
-        <Icon name="bocina" size={16} />
-        Bocina
-      </span>
-      {two && (
-        <>
-          <span style={{ color: 'var(--tinta-3)' }}>+</span>
-          <span>
-            <Icon name="audifonos" size={16} />
-            Audífonos
-          </span>
-        </>
-      )}
     </button>
   );
 }

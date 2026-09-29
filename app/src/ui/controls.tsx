@@ -1,8 +1,6 @@
-// Physical controls: knob, faders, switch, segmented buttons, meter, speaker.
+// Physical controls: knob, faders, switch, segmented buttons and meters.
 import { useCallback, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode, type WheelEvent } from 'react';
-import { ST } from '../engine/protocol';
 import { toDb, useFrame } from './frame';
-import { useUi } from '../state/ui';
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -87,7 +85,8 @@ function arcPath(cx: number, cy: number, r: number, from: number, to: number): s
 
 export function Knob({ label, pro, value, onChange, onStart, text, ink = 'var(--tinta)', def = 0.5, size = 'm', bipolar, showPro, compact }: KnobProps) {
   const drag = useDrag(value, onChange, def, onStart);
-  const px = compact ? 30 : size === 'l' ? 80 : size === 'm' ? 64 : 48;
+  // DESIGN.md 4.3: 36 px (48 px in Fácil), 26 px when it is only a dial.
+  const px = compact ? 26 : size === 'l' ? 48 : size === 'm' ? 40 : 36;
   const c = 40;
   const r = 30;
   const av = A0 + (A1 - A0) * clamp01(value);
@@ -109,15 +108,15 @@ export function Knob({ label, pro, value, onChange, onStart, text, ink = 'var(--
         className="perilla-svg"
         {...drag}
       >
-        <path d={arcPath(c, c, r, A0, A1)} fill="none" stroke="var(--pantalla)" strokeWidth="5" />
+        <path d={arcPath(c, c, r, A0, A1)} fill="none" stroke="var(--led-apagado)" strokeWidth="6" />
         {bipolar ? (
-          Math.abs(av - mid) > 0.5 && <path d={arcPath(c, c, r, Math.min(mid, av), Math.max(mid, av))} fill="none" stroke={ink} strokeWidth="5" />
+          Math.abs(av - mid) > 0.5 && <path d={arcPath(c, c, r, Math.min(mid, av), Math.max(mid, av))} fill="none" stroke={ink} strokeWidth="6" />
         ) : (
-          value > 0.002 && <path d={arcPath(c, c, r, A0, av)} fill="none" stroke={ink} strokeWidth="5" />
+          value > 0.002 && <path d={arcPath(c, c, r, A0, av)} fill="none" stroke={ink} strokeWidth="6" />
         )}
-        <circle cx={c} cy={c} r="22" fill="var(--chasis-alto)" />
-        <circle cx={c} cy={c} r="21.5" fill="none" stroke="rgba(255,255,255,.08)" strokeWidth="1" />
-        <line x1={c + (r - 15) * Math.cos(rad)} y1={c + (r - 15) * Math.sin(rad)} x2={c + (r - 8) * Math.cos(rad)} y2={c + (r - 8) * Math.sin(rad)} stroke="var(--tinta)" strokeWidth="3" />
+        <circle cx={c} cy={c} r="23" fill="var(--chasis-alto)" />
+        <circle cx={c} cy={c} r="22.5" fill="none" stroke="var(--linea)" strokeWidth="1" />
+        <line x1={c + (r - 15) * Math.cos(rad)} y1={c + (r - 15) * Math.sin(rad)} x2={c + (r - 8) * Math.cos(rad)} y2={c + (r - 8) * Math.sin(rad)} stroke="var(--tinta)" strokeWidth="4" />
       </svg>
       {!compact && (
         <>
@@ -227,34 +226,5 @@ export function Meter({ read, segments = 14, vertical, label }: MeterProps) {
         <i key={i} />
       ))}
     </div>
-  );
-}
-
-/** The speaker cone: the master meter, moving with the bass (DESIGN.md 4.3). */
-export function Bocina({ size = 46 }: { size?: number }) {
-  const memb = useRef<SVGGElement>(null);
-  const cap = useRef<SVGCircleElement>(null);
-  const lessMotion = useUi((s) => s.lessMotion);
-  const env = useRef(0);
-  useFrame((s, dt) => {
-    const kick = s[ST.KICK];
-    const low = (s[ST.BANDS] + s[ST.BANDS + 1] + s[ST.BANDS + 2]) / 3;
-    const target = Math.max(kick, low * 0.6);
-    env.current = target > env.current ? target : Math.max(target, env.current - 3.2 * dt);
-    const reduce = lessMotion || matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (memb.current) memb.current.style.transform = reduce ? '' : `scale(${1 + env.current * 0.08})`;
-    if (cap.current) cap.current.setAttribute('fill', env.current > 0.35 ? 'var(--tinta)' : 'var(--tinta-3)');
-  });
-  return (
-    <svg className="cono" width={size} height={size} viewBox="0 0 46 46" aria-hidden="true">
-      <circle cx="23" cy="23" r="22" fill="var(--pantalla)" />
-      <circle cx="23" cy="23" r="19.5" fill="none" stroke="var(--bisel)" strokeWidth="3" />
-      <g ref={memb} style={{ transformOrigin: '23px 23px' }}>
-        <circle cx="23" cy="23" r="16" fill="var(--chasis)" />
-        <circle cx="23" cy="23" r="12.5" fill="none" stroke="var(--chasis-alto)" strokeWidth="1.5" />
-        <circle cx="23" cy="23" r="9" fill="none" stroke="var(--chasis-alto)" strokeWidth="1.5" />
-        <circle ref={cap} cx="23" cy="23" r="5.5" fill="var(--tinta-3)" />
-      </g>
-    </svg>
   );
 }

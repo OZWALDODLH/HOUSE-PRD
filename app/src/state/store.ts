@@ -6,6 +6,7 @@ import { MAX_TRACKS, type SectionKind } from '../engine/protocol';
 import { PRESETS, samplerTrack, trackFromSound, defaultNote, type Sound } from './instruments';
 import { PROJECT_VERSION, SCALES, emptyStep, isChordKind, isMelodic, uid, type Family, type GenreId, type Master, type Project, type Section, type Step, type Track } from './model';
 import { defaultSoundboard, newProjectFromGenre } from './templates';
+import { emptyFx, fxById, type FxSlot } from './effects';
 
 const HISTORY = 120;
 const COALESCE_MS = 900;
@@ -108,11 +109,12 @@ export function normalizeProject(p: Project): Project {
       eq: t.eq ?? [0, 0, 0],
       drive: t.drive ?? 0,
       once: t.once ?? false,
+      fx: t.fx?.length === 2 ? t.fx : emptyFx(),
       params,
       steps: [...t.steps, ...Array.from({ length: 64 }, emptyStep)].slice(0, 64).map((s) => ({ ...emptyStep(), ...s })),
     };
   });
-  return { ...p, version: PROJECT_VERSION, tracks, soundboard: p.soundboard ?? defaultSoundboard() };
+  return { ...p, version: PROJECT_VERSION, tracks, soundboard: p.soundboard ?? defaultSoundboard(), lanes: p.lanes ?? [] };
 }
 
 // ---------------------------------------------------------------- project --
@@ -344,6 +346,7 @@ export function removeTrack(id: string): void {
     tracks: p.tracks.filter((t) => t.id !== id),
     sections: p.sections.map((s) => ({ ...s, tracks: s.tracks.filter((x) => x !== id) })),
     sidechainTrack: p.sidechainTrack === id ? null : p.sidechainTrack,
+    lanes: p.lanes.filter((l) => l.trackId !== id),
   }));
 }
 
@@ -393,6 +396,49 @@ export function recordHit(id: string, i: number, vel: number, notes: number[] | 
       let merged = notes;
       if (isChordKind(t.kind) && s.on && s.notes.length) merged = [...new Set([...s.notes, ...notes])].slice(-4);
       return setStepAt(t, i, { ...s, on: true, vel, notes: merged });
+    }),
+  );
+}
+
+// ---------------------------------------------------------------- effects --
+
+/** Puts an effect in a slot (the first empty one by default). Returns the slot or -1. */
+export function addEffect(trackId: string, kind: number, slot?: number): number {
+  const t = trackById(getProject(), trackId);
+  const info = fxById(kind);
+  if (!t || !info) return -1;
+  const at = slot ?? t.fx.findIndex((f) => f.kind === 0);
+  if (at < 0) return -1;
+  edit(null, (p) =>
+    mapTrack(p, trackId, (t) => {
+      const fx = t.fx.slice();
+      fx[at] = { kind, knobs: [...info.defaults] };
+      return { ...t, fx };
+    }),
+  );
+  return at;
+}
+
+export function removeEffect(trackId: string, slot: number): void {
+  edit(null, (p) =>
+    mapTrack(p, trackId, (t) => {
+      const fx = t.fx.slice();
+      fx[slot] = { kind: 0, knobs: [0.5, 0.5, 0.5] };
+      return { ...t, fx };
+    }),
+  );
+}
+
+export function setEffectKnob(trackId: string, slot: number, knob: number, value: number): void {
+  edit(`fx:${trackId}:${slot}:${knob}`, (p) =>
+    mapTrack(p, trackId, (t) => {
+      const v = Math.min(1, Math.max(0, value));
+      if (t.fx[slot].knobs[knob] === v) return t;
+      const fx: FxSlot[] = t.fx.slice();
+      const knobs = fx[slot].knobs.slice();
+      knobs[knob] = v;
+      fx[slot] = { ...fx[slot], knobs };
+      return { ...t, fx };
     }),
   );
 }

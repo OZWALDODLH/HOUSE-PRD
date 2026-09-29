@@ -1,4 +1,4 @@
-/* Tokens from DESIGN.md ("Sonidero"). Nothing outside this contract. */
+/* Tokens from DESIGN.md ("Estudio"). Nothing outside this contract. */
 
 @font-face {
   font-family: 'Big Shoulders';
@@ -34,18 +34,18 @@
 }
 
 :root {
-  /* Neutros (el chasis) */
-  --chasis: #2a2724;
-  --chasis-alto: #35312d;
-  --pantalla: #181614;
-  --surco: #12100f;
-  --bisel: #3f3a35;
-  --tinta: #f3ede2;
-  --tinta-2: #b9b0a3;
-  --tinta-3: #9a9185;
+  /* Neutros */
+  --fondo: #151312;
+  --chasis: #1f1c1a;
+  --chasis-alto: #2a2724;
+  --chasis-activo: #35312d;
+  --pantalla: #121110;
+  --linea: #34302c;
+  --linea-suave: #25221f;
+  --tinta: #eee8de;
+  --tinta-2: #b5ac9f;
+  --tinta-3: #958c80;
   --negro: #161412;
-  --papel: #f3ede2;
-  --papel-2: #e2d9c9;
 
   /* Tintas (familias) */
   --naranja: #ff6b1a;
@@ -55,15 +55,22 @@
   --verde: #7ed957;
   --turquesa: #19c2c2;
 
+  /* Tonos de controles */
+  --paso: #2e2a27;
+  --paso-b: #262320;
+  --led-apagado: #3a3531;
+  --tecla-blanca: #d9d2c6;
+  --tecla-negra: #1a1816;
+
   /* Tipografía */
   --display: 'Big Shoulders', 'Arial Narrow', sans-serif;
   --ui: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
 
   /* Radios por jerarquía */
-  --r-paso: 3px;
-  --r-btn: 6px;
+  --r-paso: 2px;
+  --r-btn: 4px;
+  --r-pad: 6px;
   --r-vent: 8px;
-  --r-pad: 10px;
 
   /* Movimiento */
   --curva: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -71,10 +78,10 @@
   --t-toggle: 160ms;
   --t-panel: 240ms;
 
-  /* Relieve de controles: línea clara arriba por dentro, sombra de contacto de 1 px. */
-  --relieve: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 0 rgba(0, 0, 0, 0.45);
-  --hundido: inset 0 1px 2px rgba(0, 0, 0, 0.6);
-  --flota: 0 24px 64px rgba(0, 0, 0, 0.5);
+  /* Relieve de controles: línea clara arriba por dentro. */
+  --relieve: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --hundido: inset 0 1px 2px rgba(0, 0, 0, 0.55);
+  --flota: 0 16px 48px rgba(0, 0, 0, 0.55);
 
   color-scheme: dark;
 }
@@ -93,7 +100,7 @@ body,
 }
 
 body {
-  background: var(--chasis);
+  background: var(--fondo);
   font-family: var(--ui);
   font-weight: 500;
   color: var(--tinta);
@@ -151,50 +158,6 @@ textarea {
   overflow: hidden;
   clip: rect(0 0 0 0);
   white-space: nowrap;
-}
-
-/* Uniones entre placas: surco de 2 px y bisel de 1 px. */
-.surco-b {
-  position: relative;
-}
-.surco-b::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -3px;
-  height: 3px;
-  background: linear-gradient(var(--surco) 0 2px, var(--bisel) 2px 3px);
-  z-index: 2;
-  pointer-events: none;
-}
-.surco-r {
-  position: relative;
-}
-.surco-r::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: -3px;
-  width: 3px;
-  background: linear-gradient(90deg, var(--surco) 0 2px, var(--bisel) 2px 3px);
-  z-index: 2;
-  pointer-events: none;
-}
-.surco-t {
-  position: relative;
-}
-.surco-t::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 3px;
-  background: linear-gradient(var(--surco) 0 2px, var(--bisel) 2px 3px);
-  z-index: 2;
-  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

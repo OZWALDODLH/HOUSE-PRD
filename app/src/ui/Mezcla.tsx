@@ -1,12 +1,14 @@
 // Mixer: one strip per track and the master with its volume target.
+import type { CSSProperties } from 'react';
 import { ST } from '../engine/protocol';
 import { useLive } from '../engine/live';
 import { setMaster, setTarget, setTrack, togglePump, useStudio } from '../state/store';
 import { useUi } from '../state/ui';
 import type { Master, Track } from '../state/model';
 import { INK, Pict } from './Pict';
-import { Bocina, Fader, Knob, Meter, Seg, Switch, dbText } from './controls';
+import { Fader, Knob, Meter, Seg, Switch, dbText } from './controls';
 import { filterText, panText } from './Instrumento';
+import { EfectosMini } from './Efectos';
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -14,8 +16,9 @@ export function Mezcla() {
   const p = useStudio((s) => s.project);
   const { selected, set } = useUi();
   return (
-    <section className="mezcla" aria-label="Mezcla">
+    <section className="mezcla" aria-label="Mezcla" data-tour="mezcla">
       <div className="canales">
+        {!p.tracks.length && <p className="vacio-pistas">Aquí aparece un canal por cada pista, con su volumen, efectos y nivel.</p>}
         {p.tracks.map((t, i) => (
           <Canal key={t.id} t={t} index={i} sel={selected === t.id} onSelect={() => set({ selected: t.id })} source={p.sidechainTrack === t.id} />
         ))}
@@ -28,16 +31,17 @@ export function Mezcla() {
 function Canal({ t, index, sel, onSelect, source }: { t: Track; index: number; sel: boolean; onSelect: () => void; source: boolean }) {
   const ink = INK[t.family];
   return (
-    <div className={`canal${sel ? ' sel' : ''}`} onPointerDown={onSelect}>
+    <div className={`canal${sel ? ' sel' : ''}`} onPointerDown={onSelect} style={{ '--c': ink } as CSSProperties}>
       <div className="cab">
-        <Pict pict={t.pict} family={t.family} />
+        <Pict pict={t.pict} family={t.family} size={18} />
         <b title={t.name}>{t.name}</b>
       </div>
+      <EfectosMini t={t} tour={index === 0 ? 'fx-canal' : undefined} />
       <Knob size="s" label="Filtro" bipolar value={t.filter} def={0.5} ink={ink} text={filterText(t.filter)} onChange={(v) => setTrack(t.id, { filter: Math.abs(v - 0.5) < 0.015 ? 0.5 : v })} />
       <Knob size="s" label="Espacio" value={t.sendRev} def={0} ink={ink} text={pct(t.sendRev)} onChange={(sendRev) => setTrack(t.id, { sendRev })} />
       <Knob size="s" label="Eco" value={t.sendDel} def={0} ink={ink} text={pct(t.sendDel)} onChange={(sendDel) => setTrack(t.id, { sendDel })} />
       <div className="tira">
-        <Meter vertical segments={24} read={(s) => s[ST.TRACK_PEAKS + index]} label={`Nivel de ${t.name}`} />
+        <Meter vertical segments={48} read={(s) => s[ST.TRACK_PEAKS + index]} label={`Nivel de ${t.name}`} />
         <Fader vertical label={`Volumen de ${t.name}`} db={t.vol} onChange={(vol) => setTrack(t.id, { vol })} ink={ink} />
       </div>
       <span className="db num">{dbText(t.vol)}</span>
@@ -61,11 +65,11 @@ function Canal({ t, index, sel, onSelect, source }: { t: Track; index: number; s
 function MasterStrip({ m }: { m: Master }) {
   const gr = useLive((s) => Math.round(s[ST.LIMITER_GR] * 2) / 2);
   return (
-    <aside className="master surco-t" aria-label="Master">
+    <aside className="master" aria-label="Master" data-tour="master">
       <div className="fila">
         <h3>Master</h3>
-        <Bocina size={40} />
       </div>
+      <div data-tour="destino">
       <Seg<Master['target']>
         small
         label="Destino del volumen"
@@ -77,9 +81,10 @@ function MasterStrip({ m }: { m: Master }) {
           { id: 'maximo', text: 'Al máximo', title: 'Lo más fuerte posible' },
         ]}
       />
+      </div>
       <div className="tira">
-        <Meter vertical segments={36} read={(s) => s[ST.PEAK_L]} label="Nivel izquierdo" />
-        <Meter vertical segments={36} read={(s) => s[ST.PEAK_R]} label="Nivel derecho" />
+        <Meter vertical segments={64} read={(s) => s[ST.PEAK_L]} label="Nivel izquierdo" />
+        <Meter vertical segments={64} read={(s) => s[ST.PEAK_R]} label="Nivel derecho" />
         <Fader vertical label="Volumen master" db={m.vol} onChange={(vol) => setMaster({ vol })} ink="var(--tinta)" />
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <Knob size="s" label="Pegamento" value={m.glue} def={0.35} text={pct(m.glue)} onChange={(glue) => setMaster({ glue })} />

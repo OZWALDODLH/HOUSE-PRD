@@ -35,14 +35,18 @@ async function boot() {
     void loadSamplesFor(p);
   }
   if (location.search.includes('debug')) {
-    const [{ getStatus }, { bridgeIfReady }, { useUi }, { useStudio }, { VisualsRenderer }] = await Promise.all([
+    const [{ getStatus }, { bridgeIfReady }, { useUi }, { useStudio }, { VisualsRenderer }, { useAudioEdit }, { useTour }, templates, audio] = await Promise.all([
       import('./engine/live'),
       import('./engine/bridge'),
       import('./state/ui'),
       import('./state/store'),
       import('./visuals/renderer'),
+      import('./state/audioEdit'),
+      import('./tutorial/tour'),
+      import('./state/templates'),
+      import('./engine/audio'),
     ]);
-    Object.assign(window, { __house: { getStatus, bridgeIfReady, useUi, useStudio, VisualsRenderer } });
+    Object.assign(window, { __house: { getStatus, bridgeIfReady, useUi, useStudio, VisualsRenderer, useAudioEdit, useTour, templates, audio } });
   }
   installKeyboard();
   void loadLayout();

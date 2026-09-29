@@ -5,6 +5,10 @@ import { Inicio } from './screens/Inicio';
 import { Estudio } from './screens/Estudio';
 import { Dialogos } from './ui/Dialogos';
 import { PanelVisuales } from './visuals/Panel';
+import { EditorAudio } from './ui/EditorAudio';
+import { useAudioEdit } from './state/audioEdit';
+import { Tour } from './tutorial/Tour';
+import { useTour } from './tutorial/tour';
 
 function Toast() {
   const t = useUi((s) => s.toast);
@@ -48,6 +52,8 @@ function PantallaChica({ onAnyway }: { onAnyway: () => void }) {
 
 export function App() {
   const { screen, dialog, lessMotion } = useUi();
+  const editing = useAudioEdit((s) => s.source !== null);
+  const picker = useTour((s) => s.picker);
   const [chica, setChica] = useState(() => window.innerWidth < ANCHO_MINIMO);
   useEffect(() => {
     document.documentElement.classList.toggle('menos-movimiento', lessMotion);
@@ -61,11 +67,13 @@ export function App() {
   return (
     <>
       {/* While a dialog is open, the screen behind it can't take focus or clicks. */}
-      <div className="pantalla-app" inert={dialog !== null}>
+      <div className="pantalla-app" inert={dialog !== null || editing || picker}>
         {screen === 'inicio' ? <Inicio /> : <Estudio />}
       </div>
       <Dialogos />
       {dialog === 'visuales' && <PanelVisuales />}
+      <EditorAudio />
+      <Tour />
       <AudioError />
       <Toast />
     </>

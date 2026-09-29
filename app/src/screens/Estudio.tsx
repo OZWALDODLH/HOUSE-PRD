@@ -1,68 +1,122 @@
-// Estudio: top bar, sounds, tabs, marquee, steps, instrument and pads (or the mixer).
-import { KB_MODE_NAME, useUi } from '../state/ui';
+// The studio: menu bar, toolbar, browser, the views (pattern, arrangement,
+// piano roll, mixer) under the song timeline, and the instrument dock.
+import { useState, type DragEvent } from 'react';
+import { TAB_KEY, TAB_NAME, openDialog, useUi, type Tab } from '../state/ui';
+import { importAudio } from '../state/audioEdit';
+import { MenuBar } from '../ui/MenuBar';
 import { Barra } from '../ui/Barra';
-import { Sonidos } from '../ui/Sonidos';
-import { Marquesina } from '../ui/Marquesina';
+import { Navegador } from '../ui/Navegador';
+import { Timeline } from '../ui/Timeline';
 import { Cabecera, Pistas } from '../ui/Pasos';
+import { Arreglo } from '../ui/Arreglo';
+import { PianoRoll } from '../ui/PianoRoll';
 import { Instrumento } from '../ui/Instrumento';
 import { Pads } from '../ui/Pads';
 import { Mezcla } from '../ui/Mezcla';
 import { Reto } from '../ui/Reto';
 import { Icon } from '../ui/Icon';
 import { openVisuals } from '../visuals/link';
-import { openDialog } from '../state/ui';
+
+const TABS: Tab[] = ['patron', 'arreglo', 'piano', 'mezcla'];
+
+const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer.types).includes('Files');
+
+function Vistas() {
+  const { tab, set, dock } = useUi();
+  return (
+    <nav className="vistas" aria-label="Vistas">
+      <div role="tablist" aria-label="Vista">
+        {TABS.map((t) => (
+          <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => set({ tab: t })} data-tour={`vista-${t}`}>
+            {TAB_NAME[t]}
+            <kbd>{TAB_KEY[t]}</kbd>
+          </button>
+        ))}
+      </div>
+      <div className="espacio" />
+      {tab !== 'mezcla' && (
+        <button className="btn" onClick={() => set({ dock: !dock })} title={dock ? 'Esconde el instrumento y el teclado para ver más' : 'Muestra el instrumento y el teclado'} data-tour="panel">
+          <Icon name="teclado" size={14} />
+          {dock ? 'Ocultar panel' : 'Mostrar panel'}
+        </button>
+      )}
+      <button className="btn" onClick={() => openVisuals()} title="Abre los visuales en otra ventana (F6)" data-tour="visuales">
+        <Icon name="pantalla" size={14} />
+        Visuales
+      </button>
+      <button className="btn" onClick={() => openDialog('exportar')} title="Exportar canción (Ctrl+E)" data-tour="exportar">
+        <Icon name="exportar" size={14} />
+        Exportar
+      </button>
+    </nav>
+  );
+}
+
+function Salidas() {
+  const outputs = useUi((s) => s.outputs);
+  return (
+    <button className="salidas" onClick={() => openDialog('salidas')} title="Elige por dónde suena" data-tour="salidas">
+      <Icon name="bocina" size={14} />
+      {outputs.cue ? 'Bocina y audífonos' : 'Salida de audio'}
+    </button>
+  );
+}
 
 export function Estudio() {
-  const { tab, set, keyboardOn, kbMode } = useUi();
-  const modo = KB_MODE_NAME[kbMode];
+  const { tab, dock, nav, keyboardOn } = useUi();
+  const [dropping, setDropping] = useState(false);
   return (
-    <div className="app">
+    <div
+      className={`estudio${nav ? '' : ' sin-nav'}${dock && tab !== 'mezcla' ? '' : ' sin-dock'}`}
+      onDragOver={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        setDropping(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.relatedTarget) setDropping(false);
+      }}
+      onDrop={(e) => {
+        if (!hasFiles(e)) return;
+        e.preventDefault();
+        setDropping(false);
+        void importAudio(Array.from(e.dataTransfer.files));
+      }}
+    >
       {keyboardOn && <div className="franja-tm" aria-hidden="true" />}
+      <MenuBar right={<Salidas />} />
       <Barra />
       <div className="cuerpo">
-        <Sonidos />
-        <main className={`trabajo${tab === 'mezcla' ? ' mezcla-on' : ''}`}>
-          <nav className="pestanas" aria-label="Espacios">
-            <button className={tab === 'patron' ? 'on' : ''} aria-pressed={tab === 'patron'} onClick={() => set({ tab: 'patron' })}>
-              Patrón <small>F1</small>
-            </button>
-            <button className={tab === 'mezcla' ? 'on' : ''} aria-pressed={tab === 'mezcla'} onClick={() => set({ tab: 'mezcla' })}>
-              Mezcla <small>F3</small>
-            </button>
-            <div className="derecha">
-              <button className={`tm${keyboardOn ? ' on' : ''}`} onClick={() => set({ keyboardOn: !keyboardOn })} aria-pressed={keyboardOn}>
-                <i />
-                {keyboardOn ? `Teclado musical en ${modo}. Tab para salir` : 'Teclado musical apagado. Tab para prender'}
-              </button>
-              <button className="btn-vis" onClick={() => openDialog('visuales')}>
-                <Icon name="pantalla" size={18} />
-                Visuales
-                <kbd>F6</kbd>
-              </button>
-              <button className="btn-vis" onClick={() => openDialog('exportar')}>
-                <Icon name="exportar" size={16} />
-                Exportar
-              </button>
-              <button className="btn-vis" onClick={() => openDialog('atajos')} aria-label="Atajos de teclado" title="Atajos de teclado">
-                <Icon name="teclado" size={18} />
-              </button>
-            </div>
-          </nav>
-          <Marquesina />
-          {tab === 'patron' ? (
-            <>
-              <Cabecera />
-              <Pistas />
-              <section className="inferior surco-t">
-                <Instrumento />
-                <Pads />
-              </section>
-            </>
-          ) : (
-            <Mezcla />
+        {nav && <Navegador />}
+        <main className="trabajo">
+          <Vistas />
+          <Timeline />
+          <div className={`vista vista-${tab}`}>
+            {tab === 'patron' && (
+              <>
+                <Cabecera />
+                <Pistas />
+              </>
+            )}
+            {tab === 'arreglo' && <Arreglo />}
+            {tab === 'piano' && <PianoRoll />}
+            {tab === 'mezcla' && <Mezcla />}
+          </div>
+          {dock && tab !== 'mezcla' && (
+            <section className="dock" aria-label="Instrumento y teclado musical" data-tour="dock">
+              <Instrumento />
+              <Pads />
+            </section>
           )}
         </main>
       </div>
+      {dropping && (
+        <div className="soltar-audio" aria-hidden="true">
+          <b>Suelta el audio aquí</b>
+          <span>Se abre en el editor para que elijas la parte que quieres.</span>
+        </div>
+      )}
       <Reto />
     </div>
   );

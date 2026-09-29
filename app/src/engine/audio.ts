@@ -120,14 +120,19 @@ export async function togglePlay(): Promise<void> {
   else await play();
 }
 
-/** Jumps to a bar (song mode) and keeps playing if it was. */
-export function seek(bar: number): void {
-  send([cmd.seek(bar)]);
+/** Moves the playhead to a bar and a step inside it; keeps playing if it was. */
+export function seek(bar: number, step = 0): void {
+  void startAudio().then((b) => b?.send([cmd.seek(bar, step)]));
 }
 
 // ------------------------------------------------------------ live notes --
 
-const held = new Map<string, { track: number; note: number }>();
+const held = new Map<string, { track: number; note: number; at: number }>();
+/** Newest note-on per track and note, so a late note-off never cuts a newer hit. */
+const lastOn = new Map<string, number>();
+let onCount = 0;
+/** A tap shorter than this still sounds this long (a note-off in the same audio block as its note-on would be silent). */
+const MIN_GATE_MS = 80;
 
 export function trackIndex(id: string): number {
   return getProject().tracks.findIndex((t) => t.id === id);
@@ -142,7 +147,8 @@ export function padOn(trackId: string, vel: number, key: string, note?: number):
   const n = note ?? (t.kind === 'sampler' ? 60 : defaultNote(t, p.key.root));
   const prev = held.get(key);
   if (prev) send([cmd.noteOff(prev.track, prev.note)]);
-  held.set(key, { track: i, note: n });
+  held.set(key, { track: i, note: n, at: performance.now() });
+  lastOn.set(`${i}:${n}`, ++onCount);
   void startAudio().then((b) => b?.send([cmd.noteOn(i, n, vel)]));
 }
 
@@ -150,7 +156,15 @@ export function padOff(key: string): void {
   const h = held.get(key);
   if (!h) return;
   held.delete(key);
-  send([cmd.noteOff(h.track, h.note)]);
+  const wait = MIN_GATE_MS - (performance.now() - h.at);
+  if (wait <= 0) {
+    send([cmd.noteOff(h.track, h.note)]);
+    return;
+  }
+  const id = lastOn.get(`${h.track}:${h.note}`);
+  setTimeout(() => {
+    if (lastOn.get(`${h.track}:${h.note}`) === id) send([cmd.noteOff(h.track, h.note)]);
+  }, wait);
 }
 
 export function releaseAll(): void {

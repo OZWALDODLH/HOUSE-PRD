@@ -1,6 +1,6 @@
 // Turns the project document into engine commands: everything at once when
 // the engine starts or a project opens, and only the differences after that.
-import { KIND, MASTER, MAX_TRACKS, MIX, SECTION_KIND, cmd, type Cmd } from './protocol';
+import { AUTO_TARGET, KIND, MASTER, MAX_LANES, MAX_POINTS, MAX_TRACKS, MIX, SECTION_KIND, cmd, type Cmd } from './protocol';
 import { KIND_CODE } from '../state/instruments';
 import type { Master, Project, Step, Track } from '../state/model';
 
@@ -24,7 +24,29 @@ function mixCmds(i: number, t: Track): Cmd[] {
     cmd.mix(i, MIX.EQ_HIGH, t.eq[2]),
     cmd.mix(i, MIX.DRIVE, t.drive),
     cmd.mix(i, MIX.ACTIVE, 1),
+    ...fxCmds(i, t),
   ];
+}
+
+function fxCmds(i: number, t: Track): Cmd[] {
+  const out: Cmd[] = [];
+  t.fx.forEach((f, slot) => {
+    out.push(cmd.fx(i, slot, f.kind));
+    f.knobs.forEach((v, k) => out.push(cmd.fxParam(i, slot, k, v)));
+  });
+  return out;
+}
+
+function diffFx(i: number, a: Track, b: Track): Cmd[] {
+  if (a.fx === b.fx) return [];
+  const out: Cmd[] = [];
+  b.fx.forEach((f, slot) => {
+    const old = a.fx[slot];
+    if (old === f) return;
+    if (!old || old.kind !== f.kind) out.push(cmd.fx(i, slot, f.kind));
+    f.knobs.forEach((v, k) => (!old || old.kind !== f.kind || old.knobs[k] !== v) && out.push(cmd.fxParam(i, slot, k, v)));
+  });
+  return out;
 }
 
 /** Everything the engine needs to know about one track. */
@@ -60,6 +82,7 @@ function diffTrack(i: number, a: Track, b: Track): Cmd[] {
     if (a.eq[2] !== b.eq[2]) out.push(cmd.mix(i, MIX.EQ_HIGH, b.eq[2]));
   }
   if (a.drive !== b.drive) out.push(cmd.mix(i, MIX.DRIVE, b.drive));
+  out.push(...diffFx(i, a, b));
   if (a.length !== b.length) out.push(cmd.length(i, b.length));
   if (a.steps !== b.steps) b.steps.forEach((s, k) => s !== a.steps[k] && out.push(stepCmd(i, k, s)));
   return out;
@@ -101,6 +124,27 @@ function diffMaster(a: Master, b: Master): Cmd[] {
   return all.filter((c, k) => c[2] !== before[k][2]);
 }
 
+/** Every automation lane (and the unused ones switched off). */
+export function laneCmds(p: Project): Cmd[] {
+  const index = new Map(p.tracks.map((t, i) => [t.id, i]));
+  const out: Cmd[] = [];
+  for (let i = 0; i < MAX_LANES; i++) {
+    const l = p.lanes[i];
+    const track = l?.target === 'track' ? (index.get(l.trackId ?? '') ?? -1) : 0;
+    if (!l || track < 0 || !l.points.length) {
+      out.push(cmd.autoLane(i, AUTO_TARGET.NONE, 0, 0, 0));
+      continue;
+    }
+    const pts = [...l.points].sort((a, b) => a.pos - b.pos).slice(0, MAX_POINTS);
+    out.push(cmd.autoLane(i, l.target === 'master' ? AUTO_TARGET.MASTER : AUTO_TARGET.TRACK, track, l.param, pts.length));
+    pts.forEach((pt, k) => out.push(cmd.autoPoint(i, k, pt.pos, pt.value, pt.tension)));
+  }
+  return out;
+}
+
+const sameTrackOrder = (a: Project, b: Project): boolean =>
+  a.tracks === b.tracks || (a.tracks.length === b.tracks.length && a.tracks.every((t, i) => t.id === b.tracks[i].id));
+
 /** The whole project, for a freshly started engine or a newly opened file. */
 export function projectCmds(p: Project): Cmd[] {
   const out: Cmd[] = [cmd.bpm(p.bpm), cmd.swing(p.swing), cmd.mode(p.mode === 'cancion' ? 1 : 0), cmd.master(MASTER.METRONOME, p.metronome ? 1 : 0)];
@@ -109,7 +153,7 @@ export function projectCmds(p: Project): Cmd[] {
     const t = p.tracks[i];
     out.push(...(t ? trackCmds(i, t) : [cmd.kind(i, KIND.NONE, 0)]));
   }
-  out.push(...sectionCmds(p), cmd.sidechain(sidechainIndex(p)));
+  out.push(...sectionCmds(p), cmd.sidechain(sidechainIndex(p)), ...laneCmds(p));
   return out;
 }
 
@@ -137,5 +181,6 @@ export function diffCmds(a: Project, b: Project): Cmd[] {
   }
   if (!sameSections(a, b)) out.push(...sectionCmds(b));
   if (sidechainIndex(a) !== sidechainIndex(b)) out.push(cmd.sidechain(sidechainIndex(b)));
+  if (a.lanes !== b.lanes || !sameTrackOrder(a, b)) out.push(...laneCmds(b));
   return out;
 }

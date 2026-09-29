@@ -1,4 +1,5 @@
 import type { SectionKind } from '../engine/protocol';
+import type { FxSlot } from './effects';
 
 export type Family = 'bateria' | 'bajo' | 'sintes' | 'voz' | 'samples' | 'efectos';
 export type InstKind = 'drum' | 'acid' | 'bass808' | 'poly' | 'sampler' | 'fm' | 'super' | 'pluck';
@@ -20,8 +21,40 @@ export type Pict =
   | 'acordes'
   | 'sinte'
   | 'voz'
-  | 'sample';
-export type GenreId = 'techhouse' | 'techno' | 'house' | 'reggaeton' | 'lofi';
+  | 'sample'
+  | 'tom'
+  | 'chasquido'
+  | 'clave'
+  | 'pandero'
+  | 'bongo'
+  | 'bajada'
+  | 'laser'
+  | 'corneta'
+  | 'guitarra'
+  | 'sierra';
+export type GenreId =
+  | 'libre'
+  | 'techhouse'
+  | 'techno'
+  | 'house'
+  | 'reggaeton'
+  | 'lofi'
+  | 'trap'
+  | 'drill'
+  | 'hiphop'
+  | 'dembow'
+  | 'cumbia'
+  | 'moombahton'
+  | 'afrobeats'
+  | 'amapiano'
+  | 'pop'
+  | 'edm'
+  | 'trance'
+  | 'dubstep'
+  | 'dnb'
+  | 'garage'
+  | 'synthwave'
+  | 'phonk';
 export type ScaleId = 'menor' | 'mayor';
 
 export interface Step {
@@ -61,6 +94,8 @@ export interface Track {
   eq: [number, number, number];
   /** Saturation 0..1. */
   drive: number;
+  /** Two insert effects (kind 0 = empty slot). */
+  fx: FxSlot[];
   sampleSlot?: number;
 }
 
@@ -83,8 +118,29 @@ export interface Master {
   target: 'streaming' | 'club' | 'maximo';
 }
 
-/** What a soundboard key plays: a catalog sound or audio you recorded. */
-export type SoundboardItem = { sound: string } | { slot: number; name: string; family: Family };
+/** A point of an automation curve: song position in steps, value 0..1, bend of the next segment (-1..1). */
+export interface AutoPoint {
+  pos: number;
+  value: number;
+  tension: number;
+}
+
+/**
+ * A curve that moves a knob over the song (Arreglo view). `param` follows
+ * automation.rs: master 0 Filtro, 1 Volumen, 2 Espacio, 3 Eco; tracks 0 Volumen,
+ * 1 Filtro, 2 Paneo, 3 Envío a espacio, 4 Envío a eco, 8..15 knobs of the
+ * instrument, 16..21 knobs of the effects.
+ */
+export interface AutoLane {
+  id: string;
+  target: 'master' | 'track';
+  trackId?: string;
+  param: number;
+  points: AutoPoint[];
+}
+
+/** What a soundboard key plays: a catalog sound or audio you recorded (with its cut). */
+export type SoundboardItem = { sound: string } | { slot: number; name: string; family: Family; params?: number[] };
 
 /** Version of the saved document; older files are upgraded when opened. */
 export const PROJECT_VERSION = 2;
@@ -106,6 +162,8 @@ export interface Project {
   sidechainTrack: string | null;
   /** Key code (KeyboardEvent.code) → sound, for the Soundboard mode. */
   soundboard: Record<string, SoundboardItem>;
+  /** Automation curves (at most 16). */
+  lanes: AutoLane[];
   createdAt: number;
   updatedAt: number;
 }

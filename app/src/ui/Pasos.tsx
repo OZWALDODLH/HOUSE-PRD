@@ -1,19 +1,10 @@
-// The step sequencer: header (loop/song, pages, sections) and the track rows.
+// The step sequencer (channel rack): a header with the beats and pages, and
+// one row per track with its steps (or notes), mute, solo and volume.
 import { useRef, useState, type CSSProperties, type DragEvent, type PointerEvent, type RefObject } from 'react';
 import { ST } from '../engine/protocol';
 import { useLive } from '../engine/live';
 import {
-  SECTION_NAMES,
-  addSection,
-  barsToSeconds,
-  formatDuration,
-  songBars,
   addTrack,
-  duplicateSection,
-  moveSection,
-  removeSection,
-  setMode,
-  setSection,
   setStep,
   setStepOn,
   setTrack,
@@ -24,131 +15,51 @@ import {
 import { useUi, toast } from '../state/ui';
 import { isMelodic, noteName, type Project, type Section, type Track } from '../state/model';
 import { soundById } from '../state/instruments';
-import type { SectionKind } from '../engine/protocol';
 import { INK, Pict } from './Pict';
 import { Icon } from './Icon';
-import { Fader, Seg } from './controls';
-import { Menu } from './Menu';
+import { Fader } from './controls';
 import { useFrame } from './frame';
+import { dropOnTrack, librarySampleToTrack } from './Navegador';
 
 export const pageCount = (p: Project): number => Math.max(1, ...p.tracks.map((t) => Math.ceil(t.length / 16)));
 
 // ------------------------------------------------------------- cabecera --
-
-const KINDS: SectionKind[] = ['intro', 'verso', 'precoro', 'coro', 'subida', 'drop', 'pausa', 'puente', 'salida'];
-
-function EditorSeccion({ s }: { s: Section }) {
-  const bars = [4, 8, 16, 32];
-  const next = bars.find((b) => b > s.bars) ?? 4;
-  const set = useUi((u) => u.set);
-  return (
-    <div className="editor-seccion">
-      <Menu
-        className="mini"
-        title="Cambiar el tipo de sección"
-        label={
-          <>
-            {s.name}
-            <Icon name="abajo" size={12} />
-          </>
-        }
-      >
-        {(close) =>
-          KINDS.map((k) => (
-            <button
-              key={k}
-              role="menuitemradio"
-              aria-checked={s.kind === k}
-              className={s.kind === k ? 'on' : ''}
-              onClick={() => {
-                setSection(s.id, { kind: k, name: SECTION_NAMES[k] });
-                close();
-              }}
-            >
-              {SECTION_NAMES[k]}
-            </button>
-          ))
-        }
-      </Menu>
-      <button className="mini" onClick={() => setSection(s.id, { bars: next })} title="Cambiar la duración">
-        {s.bars} compases
-      </button>
-      <button className="mini" onClick={() => moveSection(s.id, -1)} aria-label="Mover a la izquierda">
-        <Icon name="izq" size={12} />
-      </button>
-      <button className="mini" onClick={() => moveSection(s.id, 1)} aria-label="Mover a la derecha">
-        <Icon name="der" size={12} />
-      </button>
-      <button className="mini" onClick={() => duplicateSection(s.id)}>
-        <Icon name="duplicar" size={12} />
-        Duplicar
-      </button>
-      <button className="mini" onClick={() => set({ selectedSection: addSection('drop', s.id) })}>
-        <Icon name="mas" size={12} />
-        Sección
-      </button>
-      <button
-        className="mini"
-        onClick={() => {
-          removeSection(s.id);
-          set({ selectedSection: null });
-        }}
-        aria-label="Borrar sección"
-        title="Borrar sección"
-      >
-        <Icon name="basura" size={12} />
-      </button>
-    </div>
-  );
-}
 
 export function Cabecera() {
   const p = useStudio((s) => s.project);
   const { page, selectedSection, set, follow } = useUi();
   const pages = pageCount(p);
   const livePage = useLive((s) => (s[ST.PLAYING] > 0.5 ? Math.floor((s[ST.STEP] % (pages * 16)) / 16) : -1));
-  const section = p.mode === 'cancion' ? p.sections.find((s) => s.id === selectedSection) : undefined;
+  const liveSection = useLive((s) => (s[ST.MODE] > 0.5 && s[ST.PLAYING] > 0.5 ? s[ST.SECTION] : -1));
+  const section = p.mode === 'cancion' ? (p.sections.find((s) => s.id === selectedSection) ?? p.sections[liveSection]) : undefined;
   const shown = follow && livePage >= 0 ? livePage : Math.min(page, pages - 1);
   return (
     <div className="cabecera">
       <div className="izq">
-        <Seg
-          small
-          label="Qué suena al reproducir"
-          value={p.mode}
-          onChange={(m) => setMode(m)}
-          options={[
-            { id: 'patron', text: 'Loop', title: 'Repite el patrón una y otra vez' },
-            { id: 'cancion', text: 'Canción', title: 'Toca las secciones de la marquesina, de principio a fin' },
-          ]}
-        />
-        <span className="duracion num" title={p.mode === 'cancion' ? 'Duración de la canción' : 'Duración del loop'}>
-          {p.mode === 'cancion' ? formatDuration(barsToSeconds(songBars(p), p.bpm)) : `${pages} ${pages === 1 ? 'compás' : 'compases'}`}
+        <b>{section ? section.name : 'Patrón'}</b>
+        <span className="duracion num" title={section ? 'Las pistas con ✓ suenan en esta sección' : 'Largo del patrón'}>
+          {section ? `${section.bars} compases` : `${pages} ${pages === 1 ? 'compás' : 'compases'}`}
         </span>
       </div>
-      {section ? (
-        <EditorSeccion s={section} />
-      ) : (
-        <div className="tiempos" aria-hidden="true">
-          {[1, 2, 3, 4].map((t) => (
-            <div key={t}>
-              <span>{pages > 1 ? `${shown + 1}.${t}` : t}</span>
-              <span>·</span>
-              <span>·</span>
-              <span>·</span>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="tiempos" aria-hidden="true">
+        {[1, 2, 3, 4].map((t) => (
+          <div key={t}>
+            <span>{pages > 1 ? `${shown + 1}.${t}` : t}</span>
+            <span />
+            <span />
+            <span />
+          </div>
+        ))}
+      </div>
       <div className="der">
         {pages > 1 && (
           <div className="paginas" role="group" aria-label="Compás que ves">
-            <span>Compás</span>
             {Array.from({ length: pages }, (_, i) => (
               <button
                 key={i}
                 className={`pag${i === shown ? ' on' : ''}${i === livePage ? ' suena' : ''}`}
                 aria-pressed={i === shown}
+                aria-label={`Compás ${i + 1}`}
                 onClick={() => set({ page: i, follow: livePage < 0 || i === livePage })}
               >
                 {i + 1}
@@ -175,11 +86,16 @@ export function Pistas() {
   const [over, setOver] = useState(false);
 
   const onDrop = (e: DragEvent) => {
-    e.preventDefault();
     setOver(false);
-    const id = e.dataTransfer.getData('text/house-sound');
-    const s = soundById(id);
+    const sample = e.dataTransfer.getData('text/house-sample');
+    if (sample) {
+      e.preventDefault();
+      void librarySampleToTrack(sample);
+      return;
+    }
+    const s = soundById(e.dataTransfer.getData('text/house-sound'));
     if (!s) return;
+    e.preventDefault();
     const tid = addTrack(s);
     if (!tid) toast('Ya tienes 32 pistas. Borra una para agregar otra.', 'error');
     else useUi.getState().set({ selected: tid });
@@ -190,18 +106,23 @@ export function Pistas() {
       className={`pistas${over ? ' soltar' : ''}`}
       aria-label="Pistas del patrón"
       onDragOver={(e) => {
-        if (e.dataTransfer.types.includes('text/house-sound')) {
+        if (e.dataTransfer.types.includes('text/house-sound') || e.dataTransfer.types.includes('text/house-sample')) {
           e.preventDefault();
           setOver(true);
         }
       }}
+      data-tour="pistas"
       onDragLeave={() => setOver(false)}
       onDrop={onDrop}
     >
       {p.tracks.map((t, i) => (
         <Fila key={t.id} t={t} index={i} page={shown} selected={selected === t.id} section={section} />
       ))}
-      {!p.tracks.length && <div className="vacio-pistas">Tu patrón está vacío. Arrastra un sonido aquí o haz doble clic en uno de la lista.</div>}
+      {!p.tracks.length && (
+        <div className="vacio-pistas">
+          <b>Tu proyecto está en blanco.</b> Arrastra aquí un sonido del navegador (o haz doble clic en uno), suelta un archivo de audio o graba tu voz.
+        </div>
+      )}
     </section>
   );
 }
@@ -219,8 +140,27 @@ function Fila({ t, index, page, selected, section }: FilaProps) {
   const inSection = section ? section.tracks.includes(t.id) : true;
   const [editing, setEditing] = useState(false);
   const repeats = page * 16 >= t.length;
+  const [over, setOver] = useState(false);
   return (
-    <div className={`pista${selected ? ' sel' : ''}${section && !inSection ? ' fuera' : ''}`}>
+    <div
+      className={`pista${selected ? ' sel' : ''}${section && !inSection ? ' fuera' : ''}${over ? ' soltar' : ''}`}
+      style={{ '--c': INK[t.family] } as CSSProperties}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('text/house-fx') || e.dataTransfer.types.includes('Files')) {
+          e.preventDefault();
+          e.stopPropagation();
+          setOver(true);
+        }
+      }}
+      onDragLeave={() => setOver(false)}
+      onDrop={(e) => {
+        setOver(false);
+        if (dropOnTrack(t.id, e.dataTransfer)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
+    >
       <button className="nombre" onClick={() => set({ selected: t.id })} onDoubleClick={() => setEditing(true)} aria-pressed={selected} title="Doble clic para cambiar el nombre">
         <Pict pict={t.pict} family={t.family} />
         <div>
@@ -273,21 +213,32 @@ function Fila({ t, index, page, selected, section }: FilaProps) {
 
 // ------------------------------------------------------------- pasos --
 
-/** Lights the step that sounds, without re-rendering the row. */
-function usePlayhead(t: Track, page: number, container: RefObject<HTMLElement | null>, selector: string) {
-  const last = useRef<Element | null>(null);
+/**
+ * Marks the step that sounds with a frame that moves over the row on its own
+ * layer: the row itself never repaints while the music plays.
+ */
+function usePlayhead(t: Track, page: number, container: RefObject<HTMLElement | null>, cursor: RefObject<HTMLElement | null>, selector: string) {
+  const last = useRef(-2);
   useFrame((s) => {
     const el = container.current;
-    if (!el) return;
-    let now: Element | null = null;
+    const c = cursor.current;
+    if (!el || !c) return;
+    let k = -1;
     if (s[ST.PLAYING] > 0.5) {
-      const k = (s[ST.STEP] % t.length) - ((page * 16) % t.length);
-      if (k >= 0 && k < 16) now = el.querySelectorAll(selector)[k] ?? null;
+      const now = (s[ST.STEP] % t.length) - ((page * 16) % t.length);
+      if (now >= 0 && now < 16) k = now;
     }
-    if (now === last.current) return;
-    last.current?.classList.remove('ahora');
-    now?.classList.add('ahora');
-    last.current = now;
+    if (k === last.current) return;
+    last.current = k;
+    const cell = k >= 0 ? el.querySelectorAll<HTMLElement>(selector)[k] : undefined;
+    if (!cell) {
+      c.style.display = 'none';
+      return;
+    }
+    c.style.display = '';
+    c.style.width = `${cell.offsetWidth}px`;
+    c.style.height = `${cell.offsetHeight}px`;
+    c.style.transform = `translate(${cell.offsetLeft}px, ${cell.offsetTop}px)`;
   });
 }
 
@@ -295,7 +246,8 @@ function Pasos({ t, index, page, repeats }: { t: Track; index: number; page: num
   const ref = useRef<HTMLDivElement>(null);
   const paint = useRef<{ on: boolean; key: string; last: number } | null>(null);
   const pro = useUi((s) => s.pro);
-  usePlayhead(t, page, ref, '.paso');
+  const cursor = useRef<HTMLElement>(null);
+  usePlayhead(t, page, ref, cursor, '.paso');
   const base = (page * 16) % t.length;
   const stepAt = (e: PointerEvent) => {
     const el = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
@@ -374,6 +326,7 @@ function Pasos({ t, index, page, repeats }: { t: Track; index: number; page: num
           })}
         </div>
       ))}
+      <i className="cursor-paso" ref={cursor} style={{ display: 'none' }} aria-hidden="true" />
     </div>
   );
 }
@@ -384,7 +337,8 @@ function Rollo({ t, index, page, repeats }: { t: Track; index: number; page: num
   const ref = useRef<HTMLDivElement>(null);
   const drag = useRef<{ i: number; y: number; moved: boolean; key: string; applied: number } | null>(null);
   const pro = useUi((s) => s.pro);
-  usePlayhead(t, page, ref, '.col');
+  const cursor = useRef<HTMLElement>(null);
+  usePlayhead(t, page, ref, cursor, '.col');
   const base = (page * 16) % t.length;
   // Pitch range of the whole track, so the notes keep their height between pages.
   const all = t.steps.slice(0, t.length).flatMap((s) => (s.on ? s.notes : []));
@@ -471,6 +425,7 @@ function Rollo({ t, index, page, repeats }: { t: Track; index: number; page: num
           onWheel={(e) => shiftStepNotes(t.id, base + x.k, e.deltaY < 0 ? 1 : -1)}
         />
       ))}
+      <i className="cursor-paso" ref={cursor} style={{ display: 'none' }} aria-hidden="true" />
     </div>
   );
 }

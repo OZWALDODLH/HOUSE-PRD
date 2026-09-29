@@ -30,7 +30,14 @@ type Name =
   | 'inicio'
   | 'guardar'
   | 'bucle'
-  | 'limpiar';
+  | 'limpiar'
+  | 'tijeras'
+  | 'acercar'
+  | 'alejar'
+  | 'libro'
+  | 'efecto'
+  | 'onda'
+  | 'nota';
 
 const P: Record<Name, JSX.Element> = {
   play: <path d="M7 4.5 20 12 7 19.5z" fill="currentColor" stroke="none" />,
@@ -160,6 +167,44 @@ const P: Record<Name, JSX.Element> = {
     <>
       <path d="M4 20h16" />
       <path d="M14.5 3.5l5 5-9 9h-5v-5z" />
+    </>
+  ),
+  tijeras: (
+    <>
+      <circle cx="6.5" cy="6.5" r="3" />
+      <circle cx="6.5" cy="17.5" r="3" />
+      <path d="M9 8.5 20 18M9 15.5 20 6" />
+    </>
+  ),
+  acercar: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5M10.5 7.5v6M7.5 10.5h6" />
+    </>
+  ),
+  alejar: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5M7.5 10.5h6" />
+    </>
+  ),
+  libro: (
+    <>
+      <path d="M3 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H3z" />
+      <path d="M21 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7z" />
+    </>
+  ),
+  efecto: (
+    <>
+      <path d="M3 12h3l2-6 4 12 3-9 2 3h4" />
+    </>
+  ),
+  onda: <path d="M3 12h2M7 8v8M11 4v16M15 7v10M19 10v4M21 12h0" />,
+  nota: (
+    <>
+      <path d="M9 18V5l11-2v13" />
+      <circle cx="6.5" cy="18" r="2.5" />
+      <circle cx="17.5" cy="16" r="2.5" />
     </>
   ),
 };

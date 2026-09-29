@@ -74,8 +74,8 @@ export const RETOS: Reto[] = [
     title: 'Arma tu drop',
     goal: 'Convierte tu loop en una canción con subida y drop.',
     steps: [
-      { text: 'Cambia de Loop a Canción, arriba de las pistas.', done: (c) => c.p.mode === 'cancion' },
-      { text: 'Haz clic en “¡Drop!” en la marquesina para ir directo ahí.', done: (c) => c.selectedSectionKind === 'drop' },
+      { text: 'Cambia de Loop a Canción, en la barra de arriba.', done: (c) => c.p.mode === 'cancion' },
+      { text: 'Haz clic en “¡Drop!” en la línea de tiempo para ir directo ahí.', done: (c) => c.selectedSectionKind === 'drop' },
       { text: 'Reproduce y escucha cómo la subida prepara el drop.', done: (c) => c.playing && c.songSection >= 0 },
       { text: 'Exporta tu canción con Ctrl+E o el botón Exportar.', done: (c) => c.exported },
     ],

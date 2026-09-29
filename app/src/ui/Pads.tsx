@@ -9,6 +9,8 @@ import { NOTE_NAMES, SCALES, type Family, type Pict as PictId, type SoundboardIt
 import { addTrack, assignSoundboard, useStudio } from '../state/store';
 import { KB_MODE_NAME, toast, useUi, type KbMode } from '../state/ui';
 import { INK, Pict } from './Pict';
+import { librarySampleToKey, librarySampleToTrack } from './Navegador';
+import { importAudio } from '../state/audioEdit';
 import { Icon } from './Icon';
 import { Seg } from './controls';
 import { useFrame } from './frame';
@@ -23,7 +25,7 @@ export function Pads() {
   const target = noteTrack();
   useLayoutLabels();
   return (
-    <div className="pads">
+    <div className="pads" data-tour="pads">
       <div className="cab-pads">
         <h3>{KB_MODE_NAME[kbMode]}</h3>
         {kbMode !== 'soundboard' && (
@@ -41,6 +43,7 @@ export function Pads() {
           </span>
         )}
         {kbMode === 'soundboard' && <span className="espacio" />}
+        <div data-tour="modo-teclado">
         <Seg<KbMode>
           small
           label="Modo del teclado musical"
@@ -53,6 +56,7 @@ export function Pads() {
             { id: 'soundboard', text: 'Soundboard', title: 'Cualquier sonido en cualquier tecla' },
           ]}
         />
+        </div>
       </div>
       {kbMode === 'pads' && <Rejilla />}
       {kbMode === 'piano' && <Piano />}
@@ -89,6 +93,16 @@ function Pad({ code, t, index }: { code: string; t?: Track; index: number }) {
   if (!t) {
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
+      e.stopPropagation();
+      const sample = e.dataTransfer.getData('text/house-sample');
+      if (sample) {
+        void librarySampleToTrack(sample);
+        return;
+      }
+      if (e.dataTransfer.files.length) {
+        void importAudio(Array.from(e.dataTransfer.files));
+        return;
+      }
       const s = soundById(e.dataTransfer.getData('text/house-sound'));
       if (s && !addTrack(s)) toast('Ya tienes 32 pistas.', 'error');
     };
@@ -307,6 +321,19 @@ function TeclaSb({ code, item, onPick }: { code: string; item?: SoundboardItem; 
     onPick();
   };
   const onDrop = (e: DragEvent) => {
+    const sample = e.dataTransfer.getData('text/house-sample');
+    if (sample) {
+      e.preventDefault();
+      e.stopPropagation();
+      void librarySampleToKey(sample, code);
+      return;
+    }
+    if (e.dataTransfer.files.length) {
+      e.preventDefault();
+      e.stopPropagation();
+      void importAudio(Array.from(e.dataTransfer.files), { kind: 'soundboard', code });
+      return;
+    }
     const id = e.dataTransfer.getData('text/house-sound');
     if (!soundById(id)) return;
     e.preventDefault();

@@ -8,6 +8,9 @@ import { useUi } from '../state/ui';
 import { degreeNote } from '../state/dice';
 import { press, release } from './pressed';
 
+/** How many times each kind of key was played (the tutorial watches these). */
+export const played = { pads: 0, notes: 0, shots: 0 };
+
 /** Track that the note keys play: the selected one if it has notes, else the first melodic one. */
 export function noteTrack(): Track | undefined {
   const p = getProject();
@@ -31,6 +34,7 @@ export function hitTrack(trackId: string, vel: number, source: string): void {
   const t = trackById(p, trackId);
   if (!t) return;
   press(`pad:${trackId}`);
+  played.pads++;
   const note = t.kind === 'sampler' ? 60 : defaultNote(t, p.key.root);
   const now = capture(t, vel, t.kind === 'drum' ? null : [note]);
   if (now) padOn(trackId, vel, source, note);
@@ -45,6 +49,7 @@ export function hitNote(note: number, vel: number, source: string): void {
   const t = noteTrack();
   if (!t) return;
   press(`note:${note}`);
+  played.notes++;
   const now = capture(t, vel, [note]);
   if (now) padOn(t.id, vel, source, note);
 }
@@ -70,6 +75,7 @@ export function hitShot(code: string, vel: number): boolean {
   const item = p.soundboard[code];
   if (!item) return false;
   press(`sb:${code}`);
+  played.shots++;
   setTimeout(() => release(`sb:${code}`), 140);
   let c: number[] | null = null;
   if ('sound' in item) {
@@ -79,7 +85,7 @@ export function hitShot(code: string, vel: number): boolean {
       c = cmd.shot(KIND_CODE[s.kind], s.model, note, vel, 0, s.params);
     }
   } else {
-    c = cmd.shot(KIND.SAMPLER, 0, 60, vel, item.slot, PRESETS.sampler[0].params);
+    c = cmd.shot(KIND.SAMPLER, 0, 60, vel, item.slot, item.params ?? PRESETS.sampler[0].params);
   }
   if (c) void startAudio().then((b) => b?.send([c]));
   return true;

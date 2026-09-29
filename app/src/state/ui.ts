@@ -3,10 +3,15 @@ import { create } from 'zustand';
 import type { OutputRouting } from '../engine/bridge';
 
 export type Screen = 'inicio' | 'estudio';
-export type Tab = 'patron' | 'mezcla';
+/** The views of the studio: pattern (channel rack), arrangement, piano roll and mixer. */
+export type Tab = 'patron' | 'arreglo' | 'piano' | 'mezcla';
+export const TAB_NAME: Record<Tab, string> = { patron: 'Patrón', arreglo: 'Arreglo', piano: 'Piano roll', mezcla: 'Mezcla' };
+export const TAB_KEY: Record<Tab, string> = { patron: 'F1', arreglo: 'F2', mezcla: 'F3', piano: 'F4' };
+/** What the browser on the left shows. */
+export type NavTab = 'sonidos' | 'samples' | 'efectos';
 export type KbMode = 'pads' | 'piano' | 'escala' | 'soundboard';
 export const KB_MODE_NAME: Record<KbMode, string> = { pads: 'Pads', piano: 'Piano', escala: 'Escala', soundboard: 'Soundboard' };
-export type Dialog = null | 'salidas' | 'exportar' | 'grabar' | 'proyectos' | 'atajos' | 'visuales';
+export type Dialog = null | 'salidas' | 'exportar' | 'grabar' | 'proyectos' | 'atajos' | 'visuales' | 'plantillas' | 'acerca';
 export type Tone = 'info' | 'bien' | 'error';
 
 export interface Toast {
@@ -21,6 +26,10 @@ export interface Prefs {
   lessMotion: boolean;
   outputs: OutputRouting;
   micId: string | null;
+  /** The instrument and keyboard dock under the view. */
+  dock: boolean;
+  /** The browser on the left. */
+  nav: boolean;
 }
 
 export interface UiState extends Prefs {
@@ -34,6 +43,7 @@ export interface UiState extends Prefs {
   page: number;
   follow: boolean;
   selectedSection: string | null;
+  navTab: NavTab;
   audio: 'off' | 'starting' | 'on' | 'error';
   audioError: string | null;
   toast: Toast | null;
@@ -50,6 +60,8 @@ const defaults: Prefs = {
   lessMotion: false,
   outputs: { master: null, cue: null, alignMs: 0 },
   micId: null,
+  dock: true,
+  nav: true,
 };
 
 function loadPrefs(): Prefs {
@@ -74,6 +86,7 @@ export const useUi = create<UiState>((set) => ({
   page: 0,
   follow: true,
   selectedSection: null,
+  navTab: 'sonidos',
   audio: 'off',
   audioError: null,
   toast: null,
@@ -84,9 +97,10 @@ export const useUi = create<UiState>((set) => ({
 
 // Preferences persist on their own, whenever they change.
 useUi.subscribe((s, prev) => {
-  if (s.pro === prev.pro && s.kbMode === prev.kbMode && s.lessMotion === prev.lessMotion && s.outputs === prev.outputs && s.micId === prev.micId) return;
+  const same = s.pro === prev.pro && s.kbMode === prev.kbMode && s.lessMotion === prev.lessMotion && s.outputs === prev.outputs && s.micId === prev.micId && s.dock === prev.dock && s.nav === prev.nav;
+  if (same) return;
   try {
-    const p: Prefs = { pro: s.pro, kbMode: s.kbMode, lessMotion: s.lessMotion, outputs: s.outputs, micId: s.micId };
+    const p: Prefs = { pro: s.pro, kbMode: s.kbMode, lessMotion: s.lessMotion, outputs: s.outputs, micId: s.micId, dock: s.dock, nav: s.nav };
     localStorage.setItem(PREFS_KEY, JSON.stringify(p));
   } catch {
     // Private windows can refuse storage; preferences then last for the session.

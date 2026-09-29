@@ -1,6 +1,7 @@
 // Catalog of sounds, macro names (cara fácil / cara pro) and presets.
 import { KIND } from '../engine/protocol';
 import { emptyStep, uid, type Family, type InstKind, type Pict, type Track } from './model';
+import { emptyFx } from './effects';
 
 export interface Macro {
   name: string;
@@ -102,7 +103,36 @@ export const INSTRUMENT_NAME: Record<InstKind, string> = {
   pluck: 'Cuerdas',
 };
 
-export const DM = { kick: 0, snare: 1, clap: 2, hatc: 3, hato: 4, rim: 5, conga: 6, shaker: 7, cowbell: 8, cymbal: 9, timbal: 10, riser: 11, impact: 12 };
+export const DM = {
+  kick: 0,
+  snare: 1,
+  clap: 2,
+  hatc: 3,
+  hato: 4,
+  rim: 5,
+  conga: 6,
+  shaker: 7,
+  cowbell: 8,
+  cymbal: 9,
+  timbal: 10,
+  riser: 11,
+  impact: 12,
+  tom: 14,
+  snap: 15,
+  clave: 16,
+  tambourine: 17,
+  ride: 18,
+  bongo: 19,
+  kick808: 20,
+  downlifter: 21,
+  reverseCymbal: 22,
+  laser: 23,
+  airHorn: 24,
+  subDrop: 25,
+};
+
+/** Transition sounds that play once, at the start of a section. */
+export const ONCE_MODELS: number[] = [DM.riser, DM.impact, DM.downlifter, DM.subDrop];
 
 export interface Preset {
   name: string;
@@ -198,37 +228,82 @@ const synth = (id: string, name: string, desc: string, family: Family, pict: Pic
 };
 
 export const SOUNDS: Sound[] = [
+  // Batería
   drum('bombo-cuerpo', 'Bombo con cuerpo', 'Kit Madrugada', 'bombo', DM.kick, [0.45, 0.45, 0.5, 0.35]),
   drum('bombo-seco', 'Bombo seco', 'Corto y firme', 'bombo', DM.kick, [0.5, 0.22, 0.6, 0.2]),
   drum('bombo-rumble', 'Bombo rumble', 'Para techno', 'bombo', DM.kick, [0.34, 0.62, 0.35, 0.65]),
   drum('bombo-suave', 'Bombo suave', 'Para lo-fi', 'bombo', DM.kick, [0.38, 0.32, 0.25, 0.08]),
+  drum('bombo-808', 'Bombo 808', 'Largo y redondo, para trap', 'bombo', DM.kick808, [0.42, 0.45, 0.5, 0.2]),
+  drum('bombo-trap', 'Bombo trap', 'Corto y con pegada', 'bombo', DM.kick, [0.55, 0.26, 0.72, 0.55]),
+  drum('bombo-distorsion', 'Bombo distorsionado', 'Para phonk y hardstyle', 'bombo', DM.kick, [0.42, 0.42, 0.62, 0.95]),
   drum('caja-dembow', 'Caja dembow', 'Seca y alta', 'caja', DM.snare, [0.62, 0.28, 0.6, 0.35]),
   drum('caja-suave', 'Caja suave', 'Con cuerpo', 'caja', DM.snare, [0.45, 0.45, 0.3, 0.1]),
+  drum('caja-trap', 'Caja trap', 'Brillante y firme', 'caja', DM.snare, [0.58, 0.32, 0.78, 0.35]),
+  drum('caja-grande', 'Caja grande', 'Con cola, para baladas y synthwave', 'caja', DM.snare, [0.4, 0.75, 0.45, 0.2]),
   drum('palmas-secas', 'Palmas secas', 'Kit Madrugada', 'palmas', DM.clap, [0.5, 0.35, 0.55, 0.3]),
   drum('palmas-grandes', 'Palmas grandes', 'Con cola', 'palmas', DM.clap, [0.4, 0.72, 0.5, 0.45]),
+  drum('chasquido', 'Chasquido', 'Dedos que truenan', 'chasquido', DM.snap, [0.5, 0.4, 0.6, 0.2]),
   drum('hat-cobre', 'Hat cerrado de cobre', 'Kit Madrugada', 'hat', DM.hatc, [0.55, 0.35, 0.62, 0.2]),
+  drum('hat-trap', 'Hat trap', 'Fino y cerrado, para redobles', 'hat', DM.hatc, [0.62, 0.18, 0.78, 0.1]),
   drum('hat-abierto', 'Hat abierto', 'Kit Madrugada', 'hatab', DM.hato, [0.52, 0.42, 0.55, 0.2]),
+  drum('ride', 'Ride', 'Platillo que corre', 'platillo', DM.ride, [0.5, 0.35, 0.55, 0.1]),
+  drum('platillo', 'Platillo', 'Crash', 'platillo', DM.cymbal, [0.5, 0.5, 0.62, 0.2]),
+  drum('tom-alto', 'Tom alto', 'Para redobles', 'tom', DM.tom, [0.62, 0.35, 0.5, 0.2]),
+  drum('tom-bajo', 'Tom bajo', 'Grave y redondo', 'tom', DM.tom, [0.3, 0.5, 0.4, 0.2]),
   drum('rim', 'Rim', 'Clic de madera', 'rim', DM.rim, [0.5, 0.4, 0.5, 0.3]),
+  drum('clave', 'Clave', 'La madera del son y la salsa', 'clave', DM.clave, [0.5, 0.35, 0.5, 0.1]),
   drum('conga-alta', 'Conga alta', 'Percusión latina', 'conga', DM.conga, [0.62, 0.4, 0.5, 0.2]),
   drum('conga-baja', 'Conga baja', 'Percusión latina', 'conga', DM.conga, [0.36, 0.5, 0.5, 0.2]),
+  drum('bongo-alto', 'Bongo alto', 'Percusión latina y afro', 'bongo', DM.bongo, [0.62, 0.35, 0.5, 0.2]),
+  drum('bongo-bajo', 'Bongo bajo', 'Percusión latina y afro', 'bongo', DM.bongo, [0.35, 0.45, 0.5, 0.2]),
   drum('shaker', 'Shaker de semillas', 'Percusión latina', 'shaker', DM.shaker, [0.3, 0.45, 0.6, 0.0]),
+  drum('pandero', 'Pandero', 'Sonajas brillantes', 'pandero', DM.tambourine, [0.5, 0.4, 0.6, 0.1]),
   drum('cencerro', 'Cencerro', 'Para phonk y latin', 'cencerro', DM.cowbell, [0.5, 0.45, 0.5, 0.3]),
   drum('timbal', 'Timbal', 'Redobles de reggaetón', 'timbal', DM.timbal, [0.5, 0.42, 0.5, 0.3]),
-  drum('platillo', 'Platillo', 'Crash', 'platillo', DM.cymbal, [0.5, 0.5, 0.62, 0.2]),
+  // Bajos
   synth('acido-rodante', 'Bajo ácido rodante', 'Ácido', 'bajo', 'bajo', 'acid', 'Rodante de madrugada'),
   synth('acido-clasico', 'Ácido clásico', 'Ácido', 'bajo', 'bajo', 'acid', 'Ácido clásico'),
+  synth('acido-cuadrado', 'Ácido cuadrado', 'Ácido', 'bajo', 'bajo', 'acid', 'Cuadrado oscuro'),
   synth('bajo-suave', 'Bajo suave', 'Ácido', 'bajo', 'bajo', 'acid', 'Suave'),
   synth('808-perreo', '808 perreo', '808', 'bajo', 'bajo', 'bass808', 'Perreo'),
   synth('808-largo', '808 largo', '808', 'bajo', 'bajo', 'bass808', 'Largo'),
   synth('808-sucio', '808 sucio', '808', 'bajo', 'bajo', 'bass808', 'Sucio'),
+  synth('808-corto', '808 corto', '808', 'bajo', 'bajo', 'bass808', 'Corto'),
+  synth('bajo-fm', 'Bajo FM', 'Teclas FM: redondo y con golpe', 'bajo', 'bajo', 'fm', 'Bajo FM'),
+  synth('bajo-reese', 'Bajo Reese', 'Supersaw: el bajo del drum & bass', 'bajo', 'sierra', 'super', 'Bajo Reese'),
+  synth('bajo-pulsado', 'Bajo pulsado', 'Cuerdas: como un bajo eléctrico', 'bajo', 'guitarra', 'pluck', 'Bajo pulsado'),
+  // Sintes y teclas
   synth('stab-organo', 'Stab de órgano', 'Analógico', 'sintes', 'acordes', 'poly', 'Stab de órgano'),
   synth('pad-madrugada', 'Pad de madrugada', 'Analógico', 'sintes', 'sinte', 'poly', 'Pad de madrugada'),
   synth('pluck', 'Pluck', 'Analógico', 'sintes', 'sinte', 'poly', 'Pluck'),
   synth('piano-electrico', 'Piano eléctrico', 'Analógico', 'sintes', 'acordes', 'poly', 'Piano eléctrico'),
   synth('lead', 'Lead', 'Analógico', 'sintes', 'sinte', 'poly', 'Lead'),
   synth('acordes-lofi', 'Acordes lo-fi', 'Analógico', 'sintes', 'acordes', 'poly', 'Acordes lo-fi'),
+  synth('piano-fm', 'Piano FM', 'Teclas FM', 'sintes', 'sinte', 'fm', 'Piano FM'),
+  synth('rhodes-fm', 'Piano eléctrico FM', 'Teclas FM: suave, para R&B y lo-fi', 'sintes', 'acordes', 'fm', 'Piano eléctrico'),
+  synth('organo', 'Órgano', 'Teclas FM', 'sintes', 'acordes', 'fm', 'Órgano'),
+  synth('campanas', 'Campanas', 'Teclas FM: para melodías de trap', 'sintes', 'sinte', 'fm', 'Campanas'),
+  synth('marimba', 'Marimba', 'Teclas FM: madera que suena', 'sintes', 'sinte', 'fm', 'Marimba'),
+  synth('kalimba', 'Kalimba', 'Teclas FM: dulce y corta', 'sintes', 'sinte', 'fm', 'Kalimba'),
+  synth('cristal', 'Cristal', 'Teclas FM: brillo largo', 'sintes', 'sinte', 'fm', 'Cristal'),
+  synth('supersaw', 'Supersaw trance', 'Supersaw', 'sintes', 'sierra', 'super', 'Supersaw trance'),
+  synth('lead-festival', 'Lead de festival', 'Supersaw: el de los drops de EDM', 'sintes', 'sierra', 'super', 'Lead de festival'),
+  synth('pad-gigante', 'Pad gigante', 'Supersaw: un colchón enorme', 'sintes', 'sinte', 'super', 'Pad gigante'),
+  synth('acordes-trance', 'Acordes trance', 'Supersaw: stabs cortos', 'sintes', 'acordes', 'super', 'Acordes trance'),
+  synth('hoover', 'Hoover', 'Supersaw: el clásico de rave', 'sintes', 'sierra', 'super', 'Hoover'),
+  synth('guitarra-nylon', 'Guitarra de nylon', 'Cuerdas: para bachata, pop y afro', 'sintes', 'guitarra', 'pluck', 'Guitarra de nylon'),
+  synth('guitarra-acustica', 'Guitarra acústica', 'Cuerdas', 'sintes', 'guitarra', 'pluck', 'Guitarra acústica'),
+  synth('requinto', 'Requinto', 'Cuerdas: brillante, para corridos', 'sintes', 'guitarra', 'pluck', 'Requinto'),
+  synth('arpa', 'Arpa', 'Cuerdas', 'sintes', 'guitarra', 'pluck', 'Arpa'),
+  synth('koto', 'Koto', 'Cuerdas: sonido japonés', 'sintes', 'guitarra', 'pluck', 'Koto'),
+  // Efectos y transiciones
   drum('subida', 'Subida de 8 compases', 'Efectos de transición', 'subida', DM.riser, [0.5, 0.75, 0.6, 0.3], 'efectos'),
+  drum('bajada', 'Bajada', 'Cae después del drop', 'bajada', DM.downlifter, [0.5, 0.5, 0.5, 0.2], 'efectos'),
+  drum('platillo-reves', 'Platillo al revés', 'Crece hacia el siguiente compás', 'platillo', DM.reverseCymbal, [0.5, 0.67, 0.6, 0.1], 'efectos'),
   drum('impacto', 'Impacto', 'Efectos de transición', 'impacto', DM.impact, [0.5, 0.5, 0.5, 0.4], 'efectos'),
+  drum('caida-sub', 'Caída de sub', 'Un grave que cae en el drop', 'bajada', DM.subDrop, [0.4, 0.5, 0.5, 0.2], 'efectos'),
+  drum('laser', 'Láser', 'El zap del dancehall', 'laser', DM.laser, [0.5, 0.4, 0.5, 0.2], 'efectos'),
+  drum('corneta', 'Corneta', 'Air horn de sound system', 'corneta', DM.airHorn, [0.5, 0.5, 0.5, 0.4], 'efectos'),
 ];
 
 export const soundById = (id: string): Sound | undefined => SOUNDS.find((s) => s.id === id);
@@ -263,10 +338,11 @@ export function trackFromSound(s: Sound, name?: string, length = 16): Track {
     sendRev: 0,
     sendDel: 0,
     duck: s.family === 'bajo' ? 0.6 : 0,
-    once: s.kind === 'drum' && (s.model === DM.riser || s.model === DM.impact),
+    once: s.kind === 'drum' && ONCE_MODELS.includes(s.model),
     filter: 0.5,
     eq: [0, 0, 0],
     drive: 0,
+    fx: emptyFx(),
   };
 }
 
@@ -296,6 +372,7 @@ export function samplerTrack(name: string, slot: number, family: Family = 'voz')
     filter: 0.5,
     eq: [0, 0, 0],
     drive: 0,
+    fx: emptyFx(),
     sampleSlot: slot,
   };
 }
