@@ -8,7 +8,7 @@ import { goHome, newBlankProject, openProjectFromDisk, saveProjectFile, setView,
 import { saveNow } from '../state/persist';
 import { openVisuals } from '../visuals/link';
 import { importAudio, openAudioEditorForTrack } from '../state/audioEdit';
-import { startTutorial } from '../tutorial/tour';
+import { startTutorial } from '../tutorial/tourState';
 import { genreById } from '../state/templates';
 
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform);

@@ -3,7 +3,7 @@
 // explains it. Clicks go through, so the person does things for real.
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import { LESSONS } from './lessons';
-import { endTour, finishLesson, goStep, startLesson, useTour, type TourStep } from './tour';
+import { endTour, finishLesson, goStep, startLesson, useTour, type TourStep } from './tourState';
 import { Icon } from '../ui/Icon';
 
 interface Box {

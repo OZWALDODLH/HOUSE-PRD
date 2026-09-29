@@ -42,7 +42,7 @@ async function boot() {
       import('./state/store'),
       import('./visuals/renderer'),
       import('./state/audioEdit'),
-      import('./tutorial/tour'),
+      import('./tutorial/tourState'),
       import('./state/templates'),
       import('./engine/audio'),
     ]);

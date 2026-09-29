@@ -11,7 +11,7 @@ import { prepareAudio } from '../state/samples';
 import { importAudio, openAudioEditor, useAudioEdit } from '../state/audioEdit';
 import { deleteProject, listProjects, openProjectFile, openSaved, safeFileName, saveNow } from '../state/persist';
 import { newBlankProject, newFromTemplate, saveProjectFile } from '../state/actions';
-import { startTutorial } from '../tutorial/tour';
+import { startTutorial } from '../tutorial/tourState';
 import { ListaPlantillas } from './Plantillas';
 import { shortcut } from './MenuBar';
 import { canSaveFiles, saveFile, viewerDownloads } from '../state/files';

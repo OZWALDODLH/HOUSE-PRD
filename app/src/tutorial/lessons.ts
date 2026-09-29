@@ -1,7 +1,7 @@
 // Lessons of the tutorial. Each step points at a part of the studio by its
 // `data-tour` name and, when it asks the person to do something, waits for it.
 // Each lesson opens its own practice project, so the person's work stays safe.
-import type { Lesson } from './tour';
+import type { Lesson } from './tourState';
 import { ST } from '../engine/protocol';
 import { getStatus } from '../engine/live';
 import { useStudio } from '../state/store';

@@ -8,7 +8,7 @@ import { PanelVisuales } from './visuals/Panel';
 import { EditorAudio } from './ui/EditorAudio';
 import { useAudioEdit } from './state/audioEdit';
 import { Tour } from './tutorial/Tour';
-import { useTour } from './tutorial/tour';
+import { useTour } from './tutorial/tourState';
 
 function Toast() {
   const t = useUi((s) => s.toast);

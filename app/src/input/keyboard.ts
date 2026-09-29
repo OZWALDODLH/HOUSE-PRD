@@ -5,7 +5,7 @@ import { closeDialog, openDialog, toast, useUi, type Tab } from '../state/ui';
 import { saveNow } from '../state/persist';
 import { newBlankProject, saveProjectFile } from '../state/actions';
 import { importAudio, useAudioEdit } from '../state/audioEdit';
-import { endTour, useTour } from '../tutorial/tour';
+import { endTour, useTour } from '../tutorial/tourState';
 import { BANK_A, BANK_B, PIANO, SCALE_DEGREE, SOUNDBOARD_CODES } from './keys';
 import { hitNote, hitShot, hitTrack, releaseNote, releaseTrack, scaleNote } from './play';
 import { releaseEverything } from './pressed';

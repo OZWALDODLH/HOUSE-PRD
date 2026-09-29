@@ -8,7 +8,7 @@ import { openDialog, useUi } from '../state/ui';
 import { startReto } from '../state/retos';
 import { enterStudio, newBlankProject, newFromTemplate, openProjectFromDisk } from '../state/actions';
 import { LESSONS } from '../tutorial/lessons';
-import { startTutorial, useTour } from '../tutorial/tour';
+import { startTutorial, useTour } from '../tutorial/tourState';
 import { Icon, type IconName } from '../ui/Icon';
 import { MiniMarquesina } from '../ui/MiniMarquesina';
 import { ListaPlantillas } from '../ui/Plantillas';
