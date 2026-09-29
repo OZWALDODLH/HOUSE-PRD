@@ -9,7 +9,7 @@ export interface SampleData {
   name: string;
 }
 
-const SLOTS = 32;
+const SLOTS = 64;
 const mem = new Map<number, SampleData>();
 let memProject: string | null = null;
 

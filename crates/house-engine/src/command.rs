@@ -19,6 +19,8 @@ pub enum Command {
         accent: bool,
         slide: bool,
         notes: [i8; 4],
+        /// Length of each note in steps; 0 = `len`.
+        lens: [u8; 4],
     },
     SetTrackKind {
         track: u8,
@@ -61,8 +63,10 @@ pub enum Command {
         value: f32,
     },
     SetSidechainSource(u8),
+    /// Moves the playhead to a bar and a step (0..15) inside it.
     Seek {
         bar: u32,
+        step: u8,
     },
     AllNotesOff,
     Preview {
@@ -89,6 +93,34 @@ pub enum Command {
         slot: u8,
         params: [f32; 8],
     },
+    /// Puts an insert effect in one of a track's two slots (0 = none).
+    SetFx {
+        track: u8,
+        slot: u8,
+        kind: u8,
+    },
+    SetFxParam {
+        track: u8,
+        slot: u8,
+        idx: u8,
+        value: f32,
+    },
+    /// Describes an automation lane: what it moves and how many points it has.
+    AutoLane {
+        lane: u8,
+        target: u8,
+        track: u8,
+        param: u8,
+        count: u8,
+    },
+    /// One point of a lane: song position in steps, value 0..1, tension -1..1.
+    AutoPoint {
+        lane: u8,
+        index: u8,
+        pos: f32,
+        value: f32,
+        tension: f32,
+    },
 }
 
 pub mod op {
@@ -114,6 +146,10 @@ pub mod op {
     pub const SET_SAMPLE_SLOT: u32 = 20;
     pub const CLEAR_STEPS: u32 = 21;
     pub const SHOT: u32 = 22;
+    pub const SET_FX: u32 = 23;
+    pub const SET_FX_PARAM: u32 = 24;
+    pub const AUTO_LANE: u32 = 25;
+    pub const AUTO_POINT: u32 = 26;
 }
 
 /// Mixer parameter ids for `SetMix`.
@@ -150,6 +186,8 @@ pub mod master {
     pub const AUTO_BUILD: u8 = 7;
     pub const REVERB_DAMP: u8 = 8;
     pub const METRONOME_TO_MASTER: u8 = 9;
+    /// One-knob DJ filter on the whole mix: 0.5 = open.
+    pub const FILTER: u8 = 10;
 }
 
 #[inline]
@@ -211,6 +249,8 @@ pub fn decode(a: &[f64]) -> Option<Command> {
                 accent: f_at(a, 6) > 0.5,
                 slide: f_at(a, 7) > 0.5,
                 notes: [note_at(a, 8), note_at(a, 9), note_at(a, 10), note_at(a, 11)],
+                // Older hosts send 12 numbers: every note then lasts `len`.
+                lens: [u8_at(a, 12), u8_at(a, 13), u8_at(a, 14), u8_at(a, 15)],
             }
         }
         op::SET_TRACK_KIND => Command::SetTrackKind {
@@ -256,6 +296,7 @@ pub fn decode(a: &[f64]) -> Option<Command> {
         op::SET_SIDECHAIN => Command::SetSidechainSource(u8_at(a, 1)),
         op::SEEK => Command::Seek {
             bar: a.get(1).copied().unwrap_or(0.0).max(0.0) as u32,
+            step: u8_at(a, 2).min(15),
         },
         op::ALL_NOTES_OFF => Command::AllNotesOff,
         op::PREVIEW => Command::Preview {
@@ -277,6 +318,31 @@ pub fn decode(a: &[f64]) -> Option<Command> {
             vel: f_at(a, 4),
             slot: u8_at(a, 5),
             params: params_at(a, 6),
+        },
+        op::SET_FX => Command::SetFx {
+            track: u8_at(a, 1),
+            slot: u8_at(a, 2),
+            kind: u8_at(a, 3),
+        },
+        op::SET_FX_PARAM => Command::SetFxParam {
+            track: u8_at(a, 1),
+            slot: u8_at(a, 2),
+            idx: u8_at(a, 3),
+            value: f_at(a, 4).clamp(0.0, 1.0),
+        },
+        op::AUTO_LANE => Command::AutoLane {
+            lane: u8_at(a, 1),
+            target: u8_at(a, 2),
+            track: u8_at(a, 3),
+            param: u8_at(a, 4),
+            count: u8_at(a, 5),
+        },
+        op::AUTO_POINT => Command::AutoPoint {
+            lane: u8_at(a, 1),
+            index: u8_at(a, 2),
+            pos: f_at(a, 3),
+            value: f_at(a, 4),
+            tension: f_at(a, 5),
         },
         _ => return None,
     })
@@ -302,8 +368,40 @@ mod tests {
                 len: 2,
                 accent: true,
                 slide: false,
-                notes: [57, -1, -1, -1]
+                notes: [57, -1, -1, -1],
+                lens: [0; 4]
             }
+        );
+        // With per-note lengths.
+        let c = decode(&[
+            5.0, 0.0, 0.0, 1.0, 0.8, 4.0, 0.0, 0.0, 57.0, 60.0, 64.0, -1.0, 4.0, 8.0, 2.0, 0.0,
+        ])
+        .unwrap();
+        match c {
+            Command::SetStep { lens, .. } => assert_eq!(lens, [4, 8, 2, 0]),
+            _ => panic!("not a step"),
+        }
+    }
+
+    #[test]
+    fn decodes_seek_and_automation() {
+        assert_eq!(
+            decode(&[17.0, 12.0, 6.0]),
+            Some(Command::Seek { bar: 12, step: 6 })
+        );
+        assert_eq!(
+            decode(&[17.0, 3.0]),
+            Some(Command::Seek { bar: 3, step: 0 })
+        );
+        assert_eq!(
+            decode(&[26.0, 2.0, 5.0, 64.0, 0.25, -0.5]),
+            Some(Command::AutoPoint {
+                lane: 2,
+                index: 5,
+                pos: 64.0,
+                value: 0.25,
+                tension: -0.5
+            })
         );
     }
 

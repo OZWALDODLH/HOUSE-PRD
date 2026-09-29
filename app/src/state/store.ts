@@ -4,7 +4,7 @@
 import { create } from 'zustand';
 import { MAX_TRACKS, type SectionKind } from '../engine/protocol';
 import { PRESETS, samplerTrack, trackFromSound, defaultNote, type Sound } from './instruments';
-import { SCALES, emptyStep, isMelodic, uid, type Family, type GenreId, type Master, type Project, type Section, type Step, type Track } from './model';
+import { PROJECT_VERSION, SCALES, emptyStep, isChordKind, isMelodic, uid, type Family, type GenreId, type Master, type Project, type Section, type Step, type Track } from './model';
 import { defaultSoundboard, newProjectFromGenre } from './templates';
 
 const HISTORY = 120;
@@ -97,16 +97,22 @@ export const trackById = (p: Project, id: string | null): Track | undefined => (
 
 /** Fills fields added after a project was saved, so old files keep opening. */
 export function normalizeProject(p: Project): Project {
-  const tracks = p.tracks.slice(0, MAX_TRACKS).map((t) => ({
-    ...t,
-    filter: t.filter ?? 0.5,
-    eq: t.eq ?? [0, 0, 0],
-    drive: t.drive ?? 0,
-    once: t.once ?? false,
-    params: [...t.params, ...Array(8).fill(0.5)].slice(0, 8),
-    steps: [...t.steps, ...Array.from({ length: 64 }, emptyStep)].slice(0, 64).map((s) => ({ ...emptyStep(), ...s })),
-  }));
-  return { ...p, tracks, soundboard: p.soundboard ?? defaultSoundboard() };
+  const old = (p.version ?? 1) < 2;
+  const tracks = p.tracks.slice(0, MAX_TRACKS).map((t) => {
+    let params = [...t.params, ...Array(8).fill(0.5)].slice(0, 8);
+    // Version 2 gave the sampler a cut (p4, p5), smoothing (p6) and reverse (p7).
+    if (old && t.kind === 'sampler') params = [...params.slice(0, 4), 0, 1, 0, 0];
+    return {
+      ...t,
+      filter: t.filter ?? 0.5,
+      eq: t.eq ?? [0, 0, 0],
+      drive: t.drive ?? 0,
+      once: t.once ?? false,
+      params,
+      steps: [...t.steps, ...Array.from({ length: 64 }, emptyStep)].slice(0, 64).map((s) => ({ ...emptyStep(), ...s })),
+    };
+  });
+  return { ...p, version: PROJECT_VERSION, tracks, soundboard: p.soundboard ?? defaultSoundboard() };
 }
 
 // ---------------------------------------------------------------- project --
@@ -194,7 +200,10 @@ export function applyPreset(id: string, name: string): void {
     mapTrack(p, id, (t) => {
       if (t.kind === 'drum') return t;
       const preset = PRESETS[t.kind].find((x) => x.name === name);
-      return preset ? { ...t, preset: preset.name, params: [...preset.params] } : t;
+      if (!preset) return t;
+      // A sampler preset changes how it sounds, never which part of the audio plays.
+      const params = t.kind === 'sampler' ? [...preset.params.slice(0, 4), ...t.params.slice(4)] : [...preset.params];
+      return { ...t, preset: preset.name, params };
     }),
   );
 }
@@ -230,7 +239,7 @@ function guessNotes(t: Track, i: number, key: Project['key']): number[] {
     if (s.on && s.notes.length) return [...s.notes];
   }
   const root = defaultNote(t, key.root);
-  if (t.kind !== 'poly') return [root];
+  if (!isChordKind(t.kind)) return [root];
   const scale = SCALES[key.scale];
   const third = key.root + scale[2];
   const fifth = key.root + scale[4];
@@ -382,7 +391,7 @@ export function recordHit(id: string, i: number, vel: number, notes: number[] | 
       const s = t.steps[i];
       if (!notes) return s.on && Math.abs(s.vel - vel) < 0.05 ? t : setStepAt(t, i, { ...s, on: true, vel });
       let merged = notes;
-      if (t.kind === 'poly' && s.on && s.notes.length) merged = [...new Set([...s.notes, ...notes])].slice(-4);
+      if (isChordKind(t.kind) && s.on && s.notes.length) merged = [...new Set([...s.notes, ...notes])].slice(-4);
       return setStepAt(t, i, { ...s, on: true, vel, notes: merged });
     }),
   );

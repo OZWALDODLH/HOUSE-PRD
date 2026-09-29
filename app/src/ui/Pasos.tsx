@@ -181,7 +181,7 @@ export function Pistas() {
     const s = soundById(id);
     if (!s) return;
     const tid = addTrack(s);
-    if (!tid) toast('Ya tienes 16 pistas. Borra una para agregar otra.', 'error');
+    if (!tid) toast('Ya tienes 32 pistas. Borra una para agregar otra.', 'error');
     else useUi.getState().set({ selected: tid });
   };
 

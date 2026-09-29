@@ -119,23 +119,14 @@ impl TrackFx {
     pub fn set_filter(&mut self, v: f32, sr: f32) {
         let v = v.clamp(0.0, 1.0);
         self.filter = v;
-        if (v - 0.5).abs() < 0.015 {
-            self.mode = 0;
-        } else if v < 0.5 {
-            let cut = exp_map(v / 0.5, 90.0, 18_000.0);
-            if self.mode != 1 {
+        let (mode, cut) = dj_filter(v);
+        if mode != 0 {
+            if self.mode != mode {
                 self.filt.reset();
             }
             self.filt.set(cut, 0.25, sr);
-            self.mode = 1;
-        } else {
-            let cut = exp_map((v - 0.5) / 0.5, 25.0, 7_000.0);
-            if self.mode != 2 {
-                self.filt.reset();
-            }
-            self.filt.set(cut, 0.25, sr);
-            self.mode = 2;
         }
+        self.mode = mode;
     }
 
     #[inline]
@@ -158,6 +149,64 @@ impl TrackFx {
             1 => self.filt.lp(y),
             2 => self.filt.hp(y),
             _ => y,
+        }
+    }
+}
+
+/// The one-knob DJ filter curve: 0.5 = open (mode 0), lower = low-pass
+/// (mode 1), higher = high-pass (mode 2). Returns the mode and the cutoff.
+fn dj_filter(v: f32) -> (u8, f32) {
+    if (v - 0.5).abs() < 0.015 {
+        (0, 0.0)
+    } else if v < 0.5 {
+        (1, exp_map(v / 0.5, 90.0, 18_000.0))
+    } else {
+        (2, exp_map((v - 0.5) / 0.5, 25.0, 7_000.0))
+    }
+}
+
+/// The same DJ filter for a stereo bus (the master, so it can be automated).
+#[derive(Clone, Copy)]
+pub struct DjFilter {
+    filt: [Svf; 2],
+    mode: u8,
+    pub value: f32,
+}
+
+impl Default for DjFilter {
+    fn default() -> Self {
+        DjFilter {
+            filt: [Svf::default(); 2],
+            mode: 0,
+            value: 0.5,
+        }
+    }
+}
+
+impl DjFilter {
+    pub fn set(&mut self, v: f32, sr: f32) {
+        let v = v.clamp(0.0, 1.0);
+        self.value = v;
+        let (mode, cut) = dj_filter(v);
+        if mode != 0 {
+            if self.mode != mode {
+                for f in self.filt.iter_mut() {
+                    f.reset();
+                }
+            }
+            for f in self.filt.iter_mut() {
+                f.set(cut, 0.25, sr);
+            }
+        }
+        self.mode = mode;
+    }
+
+    #[inline]
+    pub fn process(&mut self, l: f32, r: f32) -> (f32, f32) {
+        match self.mode {
+            1 => (self.filt[0].lp(l), self.filt[1].lp(r)),
+            2 => (self.filt[0].hp(l), self.filt[1].hp(r)),
+            _ => (l, r),
         }
     }
 }

@@ -34,7 +34,7 @@ export function Sonidos() {
   const add = (s: Sound) => {
     const id = addTrack(s);
     if (!id) {
-      toast('Ya tienes 16 pistas. Borra una para agregar otra.', 'error');
+      toast('Ya tienes 32 pistas. Borra una para agregar otra.', 'error');
       return;
     }
     set({ selected: id });

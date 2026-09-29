@@ -15,12 +15,18 @@
 )]
 
 pub mod analysis;
+pub mod automation;
 pub mod command;
 pub mod drums;
 pub mod dsp;
 mod engine;
+pub mod fm;
 pub mod fx;
+pub mod inserts;
+pub mod inst;
+pub mod pluck;
 pub mod sampler;
+pub mod supersaw;
 pub mod synths;
 pub mod trackfx;
 

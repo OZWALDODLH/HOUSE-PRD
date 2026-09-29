@@ -1,7 +1,7 @@
 import type { SectionKind } from '../engine/protocol';
 
 export type Family = 'bateria' | 'bajo' | 'sintes' | 'voz' | 'samples' | 'efectos';
-export type InstKind = 'drum' | 'acid' | 'bass808' | 'poly' | 'sampler';
+export type InstKind = 'drum' | 'acid' | 'bass808' | 'poly' | 'sampler' | 'fm' | 'super' | 'pluck';
 export type Pict =
   | 'bombo'
   | 'caja'
@@ -31,6 +31,8 @@ export interface Step {
   accent: boolean;
   slide: boolean;
   notes: number[];
+  /** Length of each note in steps when they differ (piano roll); else `len`. */
+  lens?: number[];
 }
 
 export interface Track {
@@ -84,7 +86,12 @@ export interface Master {
 /** What a soundboard key plays: a catalog sound or audio you recorded. */
 export type SoundboardItem = { sound: string } | { slot: number; name: string; family: Family };
 
+/** Version of the saved document; older files are upgraded when opened. */
+export const PROJECT_VERSION = 2;
+
 export interface Project {
+  /** Missing in files saved before version 2. */
+  version?: number;
   id: string;
   name: string;
   genre: GenreId;
@@ -129,4 +136,8 @@ export const emptyStep = (): Step => ({ on: false, vel: 0.85, len: 1, accent: fa
 let counter = 0;
 export const uid = (prefix = 'id'): string => `${prefix}-${Date.now().toString(36)}-${(counter++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-export const isMelodic = (t: Track): boolean => t.kind === 'acid' || t.kind === 'bass808' || t.kind === 'poly';
+/** Instruments that play one note at a time, low (the basslines). */
+export const isBassKind = (k: InstKind): boolean => k === 'acid' || k === 'bass808';
+/** Instruments that play chords: every note of a step at once. */
+export const isChordKind = (k: InstKind): boolean => k === 'poly' || k === 'fm' || k === 'super' || k === 'pluck';
+export const isMelodic = (t: Track): boolean => isBassKind(t.kind) || isChordKind(t.kind);

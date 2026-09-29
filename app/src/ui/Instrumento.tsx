@@ -99,7 +99,7 @@ export function Instrumento() {
                   close();
                   const id = duplicateTrack(t.id);
                   if (id) set({ selected: id });
-                  else toast('Ya tienes 16 pistas. Borra una para duplicar.', 'error');
+                  else toast('Ya tienes 32 pistas. Borra una para duplicar.', 'error');
                 }}
               >
                 <Icon name="duplicar" size={14} />
@@ -145,20 +145,23 @@ export function Instrumento() {
             <Efectos t={t} />
           ) : (
             <div className="perillas">
-              {shown.map((m, i) => (
-                <Knob
-                  key={m.pro}
-                  label={m.name}
-                  pro={m.pro}
-                  showPro
-                  size={pro ? 'm' : 'l'}
-                  value={t.params[i] ?? 0.5}
-                  def={0.5}
-                  ink={ink}
-                  text={pct(t.params[i] ?? 0.5)}
-                  onChange={(v) => setParam(t.id, i, v)}
-                />
-              ))}
+              {shown.map((m, i) => {
+                const k = m.idx ?? i;
+                return (
+                  <Knob
+                    key={m.pro}
+                    label={m.name}
+                    pro={m.pro}
+                    showPro
+                    size={pro ? 'm' : 'l'}
+                    value={t.params[k] ?? 0.5}
+                    def={0.5}
+                    ink={ink}
+                    text={pct(t.params[k] ?? 0.5)}
+                    onChange={(v) => setParam(t.id, k, v)}
+                  />
+                );
+              })}
             </div>
           )}
           {!(pro && side === 'efectos') && (
@@ -267,7 +270,7 @@ function drawFor(t: Track): { label: string; path: string } {
     }
     return { label: 'Filtro', path: toPath(pts) };
   }
-  if (t.kind === 'poly') {
+  if (t.kind === 'poly' || t.kind === 'super' || t.kind === 'fm') {
     const a = 0.005 + p[1] * 1.2;
     const d = 0.25;
     const s = p[7];

@@ -2,7 +2,7 @@
 import { padOff, padOn, quantizedStep, startAudio } from '../engine/audio';
 import { KIND, cmd } from '../engine/protocol';
 import { KIND_CODE, PRESETS, defaultNote, soundById } from '../state/instruments';
-import { isMelodic, type Track } from '../state/model';
+import { isBassKind, isChordKind, isMelodic, type Track } from '../state/model';
 import { getProject, recordHit, trackById } from '../state/store';
 import { useUi } from '../state/ui';
 import { degreeNote } from '../state/dice';
@@ -75,7 +75,7 @@ export function hitShot(code: string, vel: number): boolean {
   if ('sound' in item) {
     const s = soundById(item.sound);
     if (s) {
-      const note = s.kind === 'acid' || s.kind === 'bass808' ? 36 + p.key.root : s.kind === 'poly' ? 60 + p.key.root : 60;
+      const note = isBassKind(s.kind) ? 36 + p.key.root : isChordKind(s.kind) ? 60 + p.key.root : 60;
       c = cmd.shot(KIND_CODE[s.kind], s.model, note, vel, 0, s.params);
     }
   } else {

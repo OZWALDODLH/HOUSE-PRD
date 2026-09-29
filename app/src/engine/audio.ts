@@ -7,7 +7,7 @@ import { useStudio, getProject } from '../state/store';
 import { useUi } from '../state/ui';
 import { sendAllSamples } from '../state/samples';
 import { KIND_CODE, defaultNote, type Sound } from '../state/instruments';
-import type { Project } from '../state/model';
+import { isBassKind, isChordKind, type Project } from '../state/model';
 
 let lastSent: Project | null = null;
 let auditioning = false;
@@ -159,7 +159,7 @@ export function releaseAll(): void {
 
 /** Auditions a catalog sound on the pre-listen bus (does not touch the project). */
 export function previewSound(s: Sound, note?: number): void {
-  const n = note ?? (s.kind === 'acid' || s.kind === 'bass808' ? 33 + getProject().key.root : s.kind === 'poly' ? 60 + getProject().key.root : 60);
+  const n = note ?? (isBassKind(s.kind) ? 33 + getProject().key.root : isChordKind(s.kind) ? 60 + getProject().key.root : 60);
   void startAudio().then((b) => b?.send([cmd.preview(KIND_CODE[s.kind], s.model, n, 0.9, s.params)]));
 }
 

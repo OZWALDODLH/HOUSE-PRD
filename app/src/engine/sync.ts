@@ -6,7 +6,7 @@ import type { Master, Project, Step, Track } from '../state/model';
 
 const NO_SIDECHAIN = 255;
 
-const stepCmd = (i: number, k: number, s: Step): Cmd => cmd.step(i, k, s.on, s.vel, s.len, s.accent, s.slide, s.notes);
+const stepCmd = (i: number, k: number, s: Step): Cmd => cmd.step(i, k, s.on, s.vel, s.len, s.accent, s.slide, s.notes, s.lens);
 
 function mixCmds(i: number, t: Track): Cmd[] {
   return [

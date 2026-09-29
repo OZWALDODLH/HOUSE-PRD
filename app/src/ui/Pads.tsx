@@ -1,6 +1,6 @@
 // Pads (your tracks), piano and scale keys. Mouse, touch and the computer keyboard.
 import { useEffect, useReducer, useRef, useState, type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, type ReactNode } from 'react';
-import { ST } from '../engine/protocol';
+import { triggered } from '../engine/protocol';
 import { BANK_A, PIANO, SCALE_ROWS, SOUNDBOARD_ROWS, keyLabel, onLayout } from '../input/keys';
 import { hitNote, hitShot, hitTrack, noteTrack, releaseNote, releaseTrack, scaleNote } from '../input/play';
 import { useHeld } from '../input/pressed';
@@ -82,7 +82,7 @@ function Pad({ code, t, index }: { code: string; t?: Track; index: number }) {
     const el = ref.current;
     if (!el || !t) return;
     const now = performance.now();
-    if ((s[ST.TRIGGERS] >> index) & 1) flash.current = now + 90;
+    if (triggered(s, index)) flash.current = now + 90;
     el.classList.toggle('golpe', held || now < flash.current);
   });
   const src = (e: PointerEvent) => `ptr:${e.pointerId}:${index}`;
@@ -90,7 +90,7 @@ function Pad({ code, t, index }: { code: string; t?: Track; index: number }) {
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
       const s = soundById(e.dataTransfer.getData('text/house-sound'));
-      if (s && !addTrack(s)) toast('Ya tienes 16 pistas.', 'error');
+      if (s && !addTrack(s)) toast('Ya tienes 32 pistas.', 'error');
     };
     return (
       <button className="pad vacio" onDragOver={(e) => e.preventDefault()} onDrop={onDrop} aria-label={`Pad vacío, tecla ${keyLabel(code)}`}>

@@ -375,7 +375,7 @@ function Grabar() {
   const keepTake = async (data: Float32Array, sr: number, name: string, family: 'voz' | 'samples') => {
     const slot = freeSlot(p);
     if (slot < 0 || p.tracks.length >= 16) {
-      toast('Ya tienes 16 pistas. Borra una para agregar tu audio.', 'error');
+      toast('Ya tienes 32 pistas. Borra una para agregar tu audio.', 'error');
       return;
     }
     await startAudio();

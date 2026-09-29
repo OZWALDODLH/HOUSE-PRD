@@ -5,6 +5,8 @@ import { emptyStep, uid, type Family, type InstKind, type Pict, type Track } fro
 export interface Macro {
   name: string;
   pro: string;
+  /** Which of the 8 instrument knobs it moves (defaults to its position). */
+  idx?: number;
 }
 
 export const MACROS: Record<InstKind, Macro[]> = {
@@ -44,10 +46,39 @@ export const MACROS: Record<InstKind, Macro[]> = {
     { name: 'Cola', pro: 'release' },
     { name: 'Filtro', pro: 'cutoff' },
   ],
+  fm: [
+    { name: 'Brillo', pro: 'FM index' },
+    { name: 'Ataque', pro: 'attack' },
+    { name: 'Cola', pro: 'release' },
+    { name: 'Relación', pro: 'ratio' },
+    { name: 'Campana', pro: 'index decay' },
+    { name: 'Vibrato', pro: 'vibrato' },
+    { name: 'Sostenido', pro: 'sustain' },
+    { name: 'Retroalimentación', pro: 'feedback' },
+  ],
+  super: [
+    { name: 'Brillo', pro: 'cutoff' },
+    { name: 'Ataque', pro: 'attack' },
+    { name: 'Cola', pro: 'release' },
+    { name: 'Grosor', pro: 'detune' },
+    { name: 'Octava abajo', pro: 'sub osc' },
+    { name: 'Envolvente', pro: 'filter env' },
+    { name: 'Resonancia', pro: 'resonance' },
+    { name: 'Sostenido', pro: 'sustain' },
+  ],
+  pluck: [
+    { name: 'Brillo', pro: 'damping' },
+    { name: 'Púa', pro: 'pick' },
+    { name: 'Cola', pro: 'decay' },
+    { name: 'Cuerpo', pro: 'body' },
+    { name: 'Forma', pro: 'excitation' },
+    { name: 'Afinación', pro: 'fine tune' },
+    { name: 'Sostenido', pro: 'release', idx: 7 },
+  ],
 };
 
 /** How many macros the "cara fácil" shows. */
-export const EASY_COUNT: Record<InstKind, number> = { drum: 4, acid: 4, bass808: 4, poly: 4, sampler: 4 };
+export const EASY_COUNT: Record<InstKind, number> = { drum: 4, acid: 4, bass808: 4, poly: 4, sampler: 4, fm: 4, super: 4, pluck: 4 };
 
 export const KIND_CODE: Record<InstKind, number> = {
   drum: KIND.DRUM,
@@ -55,6 +86,9 @@ export const KIND_CODE: Record<InstKind, number> = {
   bass808: KIND.BASS808,
   poly: KIND.POLY,
   sampler: KIND.SAMPLER,
+  fm: KIND.FM,
+  super: KIND.SUPER,
+  pluck: KIND.PLUCK,
 };
 
 export const INSTRUMENT_NAME: Record<InstKind, string> = {
@@ -63,6 +97,9 @@ export const INSTRUMENT_NAME: Record<InstKind, string> = {
   bass808: '808',
   poly: 'Analógico',
   sampler: 'Sampler',
+  fm: 'Teclas FM',
+  super: 'Supersaw',
+  pluck: 'Cuerdas',
 };
 
 export const DM = { kick: 0, snare: 1, clap: 2, hatc: 3, hato: 4, rim: 5, conga: 6, shaker: 7, cowbell: 8, cymbal: 9, timbal: 10, riser: 11, impact: 12 };
@@ -95,10 +132,39 @@ export const PRESETS: Record<Exclude<InstKind, 'drum'>, Preset[]> = {
     { name: 'Lead', params: [0.62, 0.02, 0.38, 0.4, 0.0, 0.42, 0.5, 0.65] },
     { name: 'Acordes lo-fi', params: [0.34, 0.06, 0.62, 0.2, 0.9, 0.12, 0.0, 0.45] },
   ],
+  // Only the first four knobs: the cut, smoothing and reverse belong to the audio.
   sampler: [
-    { name: 'Natural', params: pad8([0.5, 0.0, 0.6, 1.0]) },
-    { name: 'Grave', params: pad8([0.3, 0.0, 0.6, 0.7]) },
-    { name: 'Agudo y corto', params: pad8([0.7, 0.0, 0.25, 1.0]) },
+    { name: 'Natural', params: [0.5, 0.0, 0.6, 1.0, 0, 1, 0, 0] },
+    { name: 'Grave', params: [0.3, 0.0, 0.6, 0.7, 0, 1, 0, 0] },
+    { name: 'Agudo y corto', params: [0.7, 0.0, 0.25, 1.0, 0, 1, 0, 0] },
+    { name: 'Chipmunk', params: [0.85, 0.0, 0.3, 1.0, 0, 1, 0, 0] },
+  ],
+  // p3 Relación picks 0.5, 1, 2, 3, 3.5, 4, 5 or 7 (0, 1/7, 2/7 ... 1).
+  fm: [
+    { name: 'Piano FM', params: [0.28, 0.0, 0.55, 0.143, 0.5, 0.0, 0.2, 0.05] },
+    { name: 'Piano eléctrico', params: [0.32, 0.0, 0.62, 0.143, 0.42, 0.25, 0.3, 0.1] },
+    { name: 'Campanas', params: [0.5, 0.0, 0.75, 0.571, 0.7, 0.0, 0.0, 0.0] },
+    { name: 'Marimba', params: [0.3, 0.0, 0.35, 0.714, 0.2, 0.0, 0.0, 0.0] },
+    { name: 'Kalimba', params: [0.3, 0.0, 0.45, 0.429, 0.18, 0.0, 0.0, 0.0] },
+    { name: 'Bajo FM', params: [0.35, 0.0, 0.35, 0.143, 0.25, 0.0, 0.6, 0.2] },
+    { name: 'Órgano', params: [0.18, 0.02, 0.3, 0.286, 1.0, 0.3, 1.0, 0.1] },
+    { name: 'Cristal', params: [0.35, 0.55, 0.8, 1.0, 0.8, 0.2, 0.8, 0.0] },
+  ],
+  super: [
+    { name: 'Supersaw trance', params: [0.72, 0.0, 0.4, 0.55, 0.0, 0.25, 0.1, 0.85] },
+    { name: 'Lead de festival', params: [0.8, 0.0, 0.3, 0.7, 0.3, 0.15, 0.1, 0.9] },
+    { name: 'Pad gigante', params: [0.5, 0.6, 0.8, 0.5, 0.2, 0.1, 0.05, 0.9] },
+    { name: 'Acordes trance', params: [0.45, 0.0, 0.3, 0.45, 0.0, 0.75, 0.2, 0.0] },
+    { name: 'Bajo Reese', params: [0.3, 0.0, 0.25, 0.3, 0.6, 0.1, 0.25, 1.0] },
+    { name: 'Hoover', params: [0.65, 0.02, 0.35, 0.95, 0.5, 0.3, 0.2, 0.9] },
+  ],
+  pluck: [
+    { name: 'Guitarra de nylon', params: [0.45, 0.4, 0.55, 0.55, 0.0, 0.5, 0.5, 0.25] },
+    { name: 'Guitarra acústica', params: [0.7, 0.7, 0.6, 0.45, 0.2, 0.5, 0.5, 0.3] },
+    { name: 'Arpa', params: [0.6, 0.35, 0.72, 0.2, 0.0, 0.5, 0.5, 0.6] },
+    { name: 'Koto', params: [0.8, 0.85, 0.45, 0.15, 0.4, 0.5, 0.5, 0.2] },
+    { name: 'Bajo pulsado', params: [0.3, 0.3, 0.45, 0.35, 0.3, 0.5, 0.5, 0.15] },
+    { name: 'Requinto', params: [0.85, 0.9, 0.5, 0.3, 0.25, 0.5, 0.5, 0.2] },
   ],
 };
 

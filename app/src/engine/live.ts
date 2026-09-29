@@ -58,7 +58,7 @@ export class StatusFold {
       return;
     }
     for (let i = 0; i < STATUS_LEN; i++) {
-      if (i === ST.TRIGGERS) a[i] = a[i] | s[i];
+      if (i === ST.TRIGGERS || i === ST.TRIGGERS_HI) a[i] = a[i] | s[i];
       else if (HIGHEST[i]) a[i] = Math.max(a[i], s[i]);
       else a[i] = s[i];
     }
@@ -66,7 +66,10 @@ export class StatusFold {
 
   /** Everything since the last read. Triggers are reported only once. */
   read(): Float32Array {
-    if (!this.fresh) this.acc[ST.TRIGGERS] = 0;
+    if (!this.fresh) {
+      this.acc[ST.TRIGGERS] = 0;
+      this.acc[ST.TRIGGERS_HI] = 0;
+    }
     this.fresh = false;
     return this.acc;
   }
@@ -75,6 +78,7 @@ export class StatusFold {
   reset(): void {
     this.fresh = false;
     this.acc[ST.TRIGGERS] = 0;
+    this.acc[ST.TRIGGERS_HI] = 0;
     for (let i = 0; i < STATUS_LEN; i++) if (HIGHEST[i]) this.acc[i] = 0;
   }
 }

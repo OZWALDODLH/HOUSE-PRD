@@ -1,25 +1,31 @@
-//! The engine: tracks, step sequencer, song sections, mixer and master chain.
+//! The engine: tracks, step sequencer, song sections, automation, mixer and
+//! master chain.
 //!
 //! Real-time rules: `process` and `apply` never allocate, lock or block.
 //! The only allocating calls are `Engine::new` and `load_sample`, which hosts
 //! run outside the audio callback (or hand over already-allocated buffers).
 
 use crate::analysis::{Analyzer, BANDS};
+use crate::automation::{
+    master_param, target, track_param, volume_gain, Lane, Point, MAX_LANES, MAX_POINTS,
+};
 use crate::command::{master, mix, Command};
 use crate::drums::{DrumModel, DrumVoice};
 use crate::dsp::*;
 use crate::fx::{Glue, Limiter, PingPong, Reverb};
-use crate::sampler::{SampleBuf, Sampler};
-use crate::synths::{Acid, Bass808, Poly};
-use crate::trackfx::TrackFx;
+use crate::inserts::{FxCtx, Insert, INSERT_PARAMS, INSERT_SLOTS};
+use crate::inst::{Ctx, Inst};
+use crate::pluck::PLUCK_SCRATCH;
+use crate::sampler::SampleBuf;
+use crate::trackfx::{DjFilter, TrackFx};
 
-pub const MAX_TRACKS: usize = 16;
+pub const MAX_TRACKS: usize = 32;
 pub const MAX_STEPS: usize = 64;
 pub const MAX_SECTIONS: usize = 32;
 pub const MAX_BLOCK: usize = 256;
-pub const SAMPLE_SLOTS: usize = 32;
+pub const SAMPLE_SLOTS: usize = 64;
 pub const NUM_PARAMS: usize = 8;
-pub const STATUS_LEN: usize = 64;
+pub const STATUS_LEN: usize = 128;
 /// Soundboard voices (one-shots on the master bus).
 pub const SHOT_VOICES: usize = 6;
 
@@ -31,6 +37,9 @@ pub mod kind {
     pub const BASS808: u8 = 3;
     pub const POLY: u8 = 4;
     pub const SAMPLER: u8 = 5;
+    pub const FM: u8 = 6;
+    pub const SUPER: u8 = 7;
+    pub const PLUCK: u8 = 8;
 }
 
 /// Section kinds, shared with the interface and the visuals.
@@ -56,6 +65,7 @@ pub mod st {
     pub const SECTION: usize = 4;
     pub const SECTION_PROGRESS: usize = 5;
     pub const BEAT_PHASE: usize = 6;
+    /// Tracks 0..15 that played since the last read (bit mask).
     pub const TRIGGERS: usize = 7;
     pub const PEAK_L: usize = 8;
     pub const PEAK_R: usize = 9;
@@ -65,7 +75,6 @@ pub mod st {
     pub const HAT: usize = 13;
     pub const LIMITER_GR: usize = 14;
     pub const BARS_TO_NEXT: usize = 15;
-    pub const TRACK_PEAKS: usize = 16;
     pub const BANDS: usize = 32;
     pub const NEXT_KIND: usize = 48;
     pub const CUR_KIND: usize = 49;
@@ -74,6 +83,10 @@ pub mod st {
     pub const SONG_BARS: usize = 52;
     pub const MODE: usize = 53;
     pub const BAR_IN_SECTION: usize = 54;
+    /// Tracks 16..31 that played since the last read (bit mask).
+    pub const TRIGGERS_HI: usize = 55;
+    /// Peak level of each of the 32 tracks since the last read.
+    pub const TRACK_PEAKS: usize = 64;
 }
 
 /// Folds a newer status snapshot into `acc`, for hosts that read snapshots
@@ -82,7 +95,7 @@ pub mod st {
 pub fn merge_status(acc: &mut [f32; STATUS_LEN], next: &[f32; STATUS_LEN]) {
     for (i, (a, n)) in acc.iter_mut().zip(next).enumerate() {
         *a = match i {
-            st::TRIGGERS => ((*a as u32) | (*n as u32)) as f32,
+            st::TRIGGERS | st::TRIGGERS_HI => ((*a as u32) | (*n as u32)) as f32,
             st::PEAK_L..=st::HAT => a.max(*n),
             _ if (st::TRACK_PEAKS..st::TRACK_PEAKS + MAX_TRACKS).contains(&i) => a.max(*n),
             _ => *n,
@@ -98,6 +111,8 @@ pub struct Step {
     pub accent: bool,
     pub slide: bool,
     pub notes: [i8; 4],
+    /// Length of each note in steps; 0 = the step's `len`.
+    pub lens: [u8; 4],
 }
 
 impl Default for Step {
@@ -109,18 +124,20 @@ impl Default for Step {
             accent: false,
             slide: false,
             notes: [-1; 4],
+            lens: [0; 4],
         }
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum Inst {
-    None,
-    Drum(DrumVoice),
-    Acid(Acid),
-    Bass(Bass808),
-    Poly(Poly),
-    Sampler(Sampler),
+impl Step {
+    #[inline]
+    fn note_len(&self, k: usize) -> u8 {
+        if self.lens[k] > 0 {
+            self.lens[k]
+        } else {
+            self.len
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -134,15 +151,45 @@ const NO_OFF: PendingOff = PendingOff {
     samples: 0,
 };
 
+/// What automation changes on a track during the current block.
+#[derive(Clone, Copy)]
+struct TrackAuto {
+    gain: f32,
+    filter: Option<f32>,
+    pan: Option<f32>,
+    rev: Option<f32>,
+    del: Option<f32>,
+    params: [Option<f32>; NUM_PARAMS],
+    fx: [[Option<f32>; INSERT_PARAMS]; INSERT_SLOTS],
+}
+
+impl Default for TrackAuto {
+    fn default() -> Self {
+        TrackAuto {
+            gain: 1.0,
+            filter: None,
+            pan: None,
+            rev: None,
+            del: None,
+            params: [None; NUM_PARAMS],
+            fx: [[None; INSERT_PARAMS]; INSERT_SLOTS],
+        }
+    }
+}
+
 pub struct Track {
     pub inst: Inst,
     pub kind: u8,
     pub model: u8,
+    /// The knobs as the interface set them.
     pub params: [f32; NUM_PARAMS],
+    /// What the instrument uses now (the knobs, or automation on top).
+    applied: [f32; NUM_PARAMS],
     pub steps: [Step; MAX_STEPS],
     pub length: usize,
     pub vol_db: f32,
     pub pan: f32,
+    pan_applied: f32,
     pub mute: bool,
     pub solo: bool,
     pub send_rev: f32,
@@ -150,12 +197,16 @@ pub struct Track {
     pub duck: f32,
     pub active: bool,
     pub once: bool,
+    filter_knob: f32,
     pub fx: TrackFx,
+    pub inserts: [Insert; INSERT_SLOTS],
+    auto: TrackAuto,
     gain: Smooth,
     pl: f32,
     pr: f32,
     offs: [PendingOff; 8],
     audible: bool,
+    scratch: Box<[f32]>,
 }
 
 impl Track {
@@ -165,10 +216,12 @@ impl Track {
             kind: kind::NONE,
             model: 0,
             params: [0.5; NUM_PARAMS],
+            applied: [0.5; NUM_PARAMS],
             steps: [Step::default(); MAX_STEPS],
             length: 16,
             vol_db: 0.0,
             pan: 0.0,
+            pan_applied: 0.0,
             mute: false,
             solo: false,
             send_rev: 0.0,
@@ -176,24 +229,30 @@ impl Track {
             duck: 0.0,
             active: false,
             once: false,
+            filter_knob: 0.5,
             fx: TrackFx::new(sr),
+            inserts: [Insert::new(), Insert::new()],
+            auto: TrackAuto::default(),
             gain: Smooth::new(1.0, 0.015, sr),
             pl: core::f32::consts::FRAC_1_SQRT_2,
             pr: core::f32::consts::FRAC_1_SQRT_2,
             offs: [NO_OFF; 8],
             audible: true,
+            scratch: vec![0.0; PLUCK_SCRATCH].into_boxed_slice(),
         }
     }
 
+    /// Schedules the release of a note; a note already waiting is replaced, so
+    /// a new, longer note never gets cut by the previous one's release.
     fn schedule_off(&mut self, note: u8, samples: i64) {
-        for o in self.offs.iter_mut() {
-            if o.note < 0 {
-                *o = PendingOff {
-                    note: note as i16,
-                    samples,
-                };
-                return;
-            }
+        let n = note as i16;
+        if let Some(o) = self.offs.iter_mut().find(|o| o.note == n) {
+            o.samples = samples;
+            return;
+        }
+        if let Some(o) = self.offs.iter_mut().find(|o| o.note < 0) {
+            *o = PendingOff { note: n, samples };
+            return;
         }
         // All slots busy: replace the one that ends first.
         let mut idx = 0;
@@ -202,41 +261,64 @@ impl Track {
                 idx = i;
             }
         }
-        self.offs[idx] = PendingOff {
-            note: note as i16,
-            samples,
-        };
+        self.offs[idx] = PendingOff { note: n, samples };
     }
-}
 
-fn make_inst(k: u8, model: u8, sr: f32, seed: u32) -> Inst {
-    match k {
-        kind::DRUM => Inst::Drum(DrumVoice::new(DrumModel::from_u8(model), seed)),
-        kind::ACID => Inst::Acid(Acid::new(sr)),
-        kind::BASS808 => Inst::Bass(Bass808::new(sr)),
-        kind::POLY => Inst::Poly(Poly::new(sr)),
-        kind::SAMPLER => Inst::Sampler(Sampler::new(sr)),
-        _ => Inst::None,
+    fn effective_params(&self) -> [f32; NUM_PARAMS] {
+        let mut p = self.params;
+        for (v, a) in p.iter_mut().zip(self.auto.params) {
+            if let Some(x) = a {
+                *v = x;
+            }
+        }
+        p
     }
-}
 
-fn apply_params(inst: &mut Inst, params: &[f32; NUM_PARAMS], sr: f32) {
-    match inst {
-        Inst::Acid(a) => a.set_params(params),
-        Inst::Bass(b) => b.set_params(params, sr),
-        Inst::Poly(p) => p.set_params(params, sr),
-        Inst::Sampler(s) => s.set_params(params, sr),
-        _ => {}
+    /// Brings the instrument, filter, pan and effects to the values in use.
+    fn apply_values(&mut self, sr: f32) {
+        let f = self.auto.filter.unwrap_or(self.filter_knob);
+        if f != self.fx.filter {
+            self.fx.set_filter(f, sr);
+        }
+        let pan = self.auto.pan.unwrap_or(self.pan);
+        if pan != self.pan_applied {
+            let (l, r) = pan_gains(pan);
+            self.pl = l;
+            self.pr = r;
+            self.pan_applied = pan;
+        }
+        let eff = self.effective_params();
+        if eff != self.applied {
+            self.inst.set_params(&eff, sr);
+            self.applied = eff;
+        }
+        for (k, ins) in self.inserts.iter_mut().enumerate() {
+            if !ins.is_on() {
+                continue;
+            }
+            let mut v = ins.knobs;
+            for (x, a) in v.iter_mut().zip(self.auto.fx[k]) {
+                if let Some(y) = a {
+                    *x = y;
+                }
+            }
+            ins.apply(&v, sr);
+        }
     }
-}
 
-fn note_off(inst: &mut Inst, note: u8) {
-    match inst {
-        Inst::Acid(a) => a.note_off(note),
-        Inst::Bass(b) => b.note_off(note),
-        Inst::Poly(p) => p.note_off(note),
-        Inst::Sampler(s) => s.note_off(note),
-        _ => {}
+    /// Note-offs due within the next `n` samples.
+    fn run_offs(&mut self, n: usize) {
+        for k in 0..self.offs.len() {
+            if self.offs[k].note >= 0 {
+                if self.offs[k].samples <= 0 {
+                    let note = self.offs[k].note as u8;
+                    self.offs[k] = NO_OFF;
+                    self.inst.stop(note);
+                } else {
+                    self.offs[k].samples -= n as i64;
+                }
+            }
+        }
     }
 }
 
@@ -269,11 +351,32 @@ struct Section {
     kind: u8,
 }
 
+/// What automation changes on the master during the current block.
+#[derive(Clone, Copy)]
+struct MasterAuto {
+    filter: Option<f32>,
+    gain: f32,
+    rev: f32,
+    del: f32,
+}
+
+impl Default for MasterAuto {
+    fn default() -> Self {
+        MasterAuto {
+            filter: None,
+            gain: 1.0,
+            rev: 1.0,
+            del: 1.0,
+        }
+    }
+}
+
 pub struct Engine {
     pub sr: f32,
     pub tracks: [Track; MAX_TRACKS],
     preview: Track,
     shots: [Shot; SHOT_VOICES],
+    shot_scratch: [Box<[f32]>; SHOT_VOICES],
     next_shot: usize,
     click: DrumVoice,
     playing: bool,
@@ -283,9 +386,14 @@ pub struct Engine {
     last_step: u64,
     samples_to_next: f64,
     cur_dur: f64,
+    /// Song position in beats, for effects that follow the tempo. Runs even
+    /// when stopped so a wobble keeps moving while you play live.
+    beat_clock: f64,
     mode: u8,
     sections: [Section; MAX_SECTIONS],
     section_count: usize,
+    lanes: [Lane; MAX_LANES],
+    master_auto: MasterAuto,
     sidechain: Option<usize>,
     duck_env: f32,
     duck_attacking: bool,
@@ -299,6 +407,9 @@ pub struct Engine {
     build_hp: [Svf; 2],
     build_active: bool,
     master_gain: Smooth,
+    auto_gain: Smooth,
+    master_filter: DjFilter,
+    master_filter_knob: f32,
     metronome: bool,
     cue_to_master: bool,
     auto_build: bool,
@@ -341,6 +452,7 @@ impl Engine {
             tracks: core::array::from_fn(|_| Track::new(sr)),
             preview: Track::new(sr),
             shots: [SHOT_IDLE; SHOT_VOICES],
+            shot_scratch: core::array::from_fn(|_| vec![0.0; PLUCK_SCRATCH].into_boxed_slice()),
             next_shot: 0,
             click: DrumVoice::new(DrumModel::Click, 99),
             playing: false,
@@ -350,9 +462,12 @@ impl Engine {
             last_step: 0,
             samples_to_next: 0.0,
             cur_dur: 1.0,
+            beat_clock: 0.0,
             mode: 0,
             sections: [Section::default(); MAX_SECTIONS],
             section_count: 0,
+            lanes: [Lane::default(); MAX_LANES],
+            master_auto: MasterAuto::default(),
             sidechain: None,
             duck_env: 0.0,
             duck_attacking: false,
@@ -366,6 +481,9 @@ impl Engine {
             build_hp: [Svf::default(); 2],
             build_active: false,
             master_gain: Smooth::new(db_to_gain(-1.0), 0.03, sr),
+            auto_gain: Smooth::new(1.0, 0.01, sr),
+            master_filter: DjFilter::default(),
+            master_filter_knob: 0.5,
             metronome: false,
             cue_to_master: true,
             auto_build: true,
@@ -469,13 +587,20 @@ impl Engine {
     fn all_notes_off(&mut self) {
         let sr = self.sr;
         for t in self.tracks.iter_mut() {
-            note_off(&mut t.inst, 255);
-            if let Inst::Drum(v) = &mut t.inst {
-                v.choke(sr);
-            }
+            t.inst.stop(255);
+            t.inst.choke(sr);
             t.offs = [NO_OFF; 8];
         }
-        note_off(&mut self.preview.inst, 255);
+        self.preview.inst.stop(255);
+    }
+
+    /// Fraction of the current step already played (0..1).
+    fn step_fraction(&self) -> f64 {
+        if self.playing && self.cur_dur > 0.0 {
+            (1.0 - self.samples_to_next / self.cur_dur).clamp(0.0, 1.0)
+        } else {
+            0.0
+        }
     }
 
     pub fn apply(&mut self, cmd: Command) {
@@ -509,6 +634,7 @@ impl Engine {
                 accent,
                 slide,
                 notes,
+                lens,
             } => {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     if let Some(s) = t.steps.get_mut(step as usize) {
@@ -519,6 +645,7 @@ impl Engine {
                             accent,
                             slide,
                             notes,
+                            lens,
                         };
                     }
                 }
@@ -532,8 +659,10 @@ impl Engine {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     t.kind = kind;
                     t.model = model;
-                    t.inst = make_inst(kind, model, sr, track as u32 + 1);
-                    apply_params(&mut t.inst, &t.params, sr);
+                    t.inst = Inst::new(kind, model, sr, track as u32 + 1);
+                    let eff = t.effective_params();
+                    t.inst.set_params(&eff, sr);
+                    t.applied = eff;
                     t.offs = [NO_OFF; 8];
                     t.active = kind != kind::NONE;
                 }
@@ -542,7 +671,9 @@ impl Engine {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
                     if (idx as usize) < NUM_PARAMS {
                         t.params[idx as usize] = value.clamp(0.0, 1.0);
-                        apply_params(&mut t.inst, &t.params, sr);
+                        let eff = t.effective_params();
+                        t.inst.set_params(&eff, sr);
+                        t.applied = eff;
                     }
                 }
             }
@@ -556,9 +687,7 @@ impl Engine {
                         mix::VOLUME_DB => t.vol_db = value.clamp(-90.0, 12.0),
                         mix::PAN => {
                             t.pan = value.clamp(-1.0, 1.0);
-                            let (l, r) = pan_gains(t.pan);
-                            t.pl = l;
-                            t.pr = r;
+                            t.apply_values(sr);
                         }
                         mix::MUTE => t.mute = value > 0.5,
                         mix::SOLO => t.solo = value > 0.5,
@@ -567,7 +696,10 @@ impl Engine {
                         mix::DUCK => t.duck = value.clamp(0.0, 1.0),
                         mix::ACTIVE => t.active = value > 0.5 && t.kind != kind::NONE,
                         mix::ONCE_PER_SECTION => t.once = value > 0.5,
-                        mix::FILTER => t.fx.set_filter(value, sr),
+                        mix::FILTER => {
+                            t.filter_knob = value.clamp(0.0, 1.0);
+                            t.apply_values(sr);
+                        }
                         mix::EQ_LOW => t.fx.set_eq(0, value),
                         mix::EQ_MID => t.fx.set_eq(1, value),
                         mix::EQ_HIGH => t.fx.set_eq(2, value),
@@ -585,7 +717,7 @@ impl Engine {
             }
             Command::NoteOff { track, note } => {
                 if let Some(t) = self.tracks.get_mut(track as usize) {
-                    note_off(&mut t.inst, note);
+                    t.inst.stop(note);
                 }
             }
             Command::SetLength { track, steps } => {
@@ -635,6 +767,11 @@ impl Engine {
                 master::METRONOME => self.metronome = value > 0.5,
                 master::AUTO_BUILD => self.auto_build = value > 0.5,
                 master::METRONOME_TO_MASTER => self.cue_to_master = value > 0.5,
+                master::FILTER => {
+                    self.master_filter_knob = value.clamp(0.0, 1.0);
+                    let f = self.master_auto.filter.unwrap_or(self.master_filter_knob);
+                    self.master_filter.set(f, sr);
+                }
                 _ => {}
             },
             Command::SetSidechainSource(t) => {
@@ -644,14 +781,17 @@ impl Engine {
                     None
                 }
             }
-            Command::Seek { bar } => {
+            Command::Seek { bar, step } => {
                 let total = self.song_bars();
                 let b = if self.mode == 1 && total > 0 {
                     bar % total
                 } else {
                     bar
                 };
-                self.global_step = b as u64 * 16;
+                self.global_step = b as u64 * 16 + (step.min(15)) as u64;
+                // The status shows the new place right away, playing or not.
+                self.last_step = self.global_step;
+                self.beat_clock = self.global_step as f64 / 4.0;
                 self.samples_to_next = 0.0;
                 self.all_notes_off();
             }
@@ -667,21 +807,19 @@ impl Engine {
                 if p.kind != kind || p.model != model {
                     p.kind = kind;
                     p.model = model;
-                    p.inst = make_inst(kind, model, sr, 777);
+                    p.inst = Inst::new(kind, model, sr, 777);
                 }
                 p.params = params;
-                apply_params(&mut p.inst, &p.params, sr);
+                p.applied = params;
+                p.inst.set_params(&params, sr);
                 p.active = true;
-                let bpm = self.bpm;
-                let bank = &self.bank;
-                match &mut p.inst {
-                    Inst::Drum(v) => v.trigger(vel, &p.params, sr, bpm),
-                    Inst::Acid(a) => a.note_on(note, vel, false, false, sr),
-                    Inst::Bass(b) => b.note_on(note, vel, false, sr),
-                    Inst::Poly(pl) => pl.note_on(note, vel),
-                    Inst::Sampler(s) => s.note_on(note, vel, bank, sr),
-                    Inst::None => {}
-                }
+                let ctx = Ctx {
+                    sr,
+                    bpm: self.bpm,
+                    bank: &self.bank,
+                };
+                p.inst
+                    .start(note, vel, false, false, &params, &ctx, &mut p.scratch);
                 p.offs = [NO_OFF; 8];
                 p.schedule_off(note, (0.45 * sr) as i64);
             }
@@ -695,32 +833,38 @@ impl Engine {
             } => {
                 let i = self.next_shot;
                 self.next_shot = (i + 1) % SHOT_VOICES;
-                let bpm = self.bpm;
-                let bank = &self.bank;
+                let ctx = Ctx {
+                    sr,
+                    bpm: self.bpm,
+                    bank: &self.bank,
+                };
                 let s = &mut self.shots[i];
-                s.inst = make_inst(kind, model, sr, 900 + i as u32);
+                s.inst = Inst::new(kind, model, sr, 900 + i as u32);
                 s.params = params;
-                apply_params(&mut s.inst, &s.params, sr);
+                if let Inst::Sampler(sm) = &mut s.inst {
+                    sm.slot = (slot as usize).min(SAMPLE_SLOTS - 1);
+                }
+                s.inst.set_params(&params, sr);
                 s.note = note;
                 s.life = (6.0 * sr) as i64;
                 s.off = (0.6 * sr) as i64;
                 s.active = kind != kind::NONE;
                 let vel = vel.clamp(0.0, 1.0);
-                match &mut s.inst {
-                    Inst::Drum(v) => v.trigger(vel, &s.params, sr, bpm),
-                    Inst::Acid(a) => a.note_on(note, vel, false, false, sr),
-                    Inst::Bass(b) => b.note_on(note, vel, false, sr),
-                    Inst::Poly(p) => p.note_on(note, vel),
-                    Inst::Sampler(sm) => {
-                        sm.slot = (slot as usize).min(SAMPLE_SLOTS - 1);
-                        sm.note_on(note, vel, bank, sr);
-                        // A recorded sound plays to its end.
-                        s.off = s.life;
-                    }
-                    Inst::None => {}
+                s.inst.start(
+                    note,
+                    vel,
+                    false,
+                    false,
+                    &params,
+                    &ctx,
+                    &mut self.shot_scratch[i],
+                );
+                if matches!(s.inst, Inst::Sampler(_)) {
+                    // A recorded sound plays to its end.
+                    s.off = s.life;
                 }
-                if let Inst::Drum(v) = &s.inst {
-                    let c = v.model.hit_class();
+                if let Some(m) = s.inst.drum_model() {
+                    let c = m.hit_class();
                     if c > 0 {
                         let h = &mut self.hits[(c - 1) as usize];
                         *h = h.max(vel);
@@ -734,13 +878,63 @@ impl Engine {
                     }
                 }
             }
+            Command::SetFx { track, slot, kind } => {
+                if let Some(t) = self.tracks.get_mut(track as usize) {
+                    if let Some(ins) = t.inserts.get_mut(slot as usize) {
+                        ins.set_kind(kind, sr);
+                    }
+                }
+            }
+            Command::SetFxParam {
+                track,
+                slot,
+                idx,
+                value,
+            } => {
+                if let Some(t) = self.tracks.get_mut(track as usize) {
+                    if let Some(ins) = t.inserts.get_mut(slot as usize) {
+                        ins.set_knob(idx as usize, value, sr);
+                    }
+                }
+            }
+            Command::AutoLane {
+                lane,
+                target,
+                track,
+                param,
+                count,
+            } => {
+                if let Some(l) = self.lanes.get_mut(lane as usize) {
+                    l.target = target;
+                    l.track = track;
+                    l.param = param;
+                    l.count = (count as usize).min(MAX_POINTS);
+                }
+            }
+            Command::AutoPoint {
+                lane,
+                index,
+                pos,
+                value,
+                tension,
+            } => {
+                if let Some(l) = self.lanes.get_mut(lane as usize) {
+                    if let Some(p) = l.points.get_mut(index as usize) {
+                        *p = Point {
+                            pos: pos.max(0.0),
+                            value: value.clamp(0.0, 1.0),
+                            tension: tension.clamp(-1.0, 1.0),
+                        };
+                    }
+                }
+            }
         }
     }
 
     fn mark_hit(&mut self, ti: usize, vel: f32) {
         self.trig_acc |= 1 << ti;
-        if let Inst::Drum(v) = &self.tracks[ti].inst {
-            let c = v.model.hit_class();
+        if let Some(m) = self.tracks[ti].inst.drum_model() {
+            let c = m.hit_class();
             if c > 0 {
                 let h = &mut self.hits[(c - 1) as usize];
                 *h = h.max(vel);
@@ -749,7 +943,7 @@ impl Engine {
     }
 
     /// Starts a sound on a track. `step` carries the pattern step when the
-    /// sequencer is the one triggering (used for note lengths and slides).
+    /// sequencer is the one triggering (used for chords, note lengths and slides).
     fn trigger(
         &mut self,
         ti: usize,
@@ -759,59 +953,58 @@ impl Engine {
         slide: bool,
         step: Option<(Step, u64)>,
     ) {
-        let sr = self.sr;
-        let bpm = self.bpm;
         let base = self.base_step();
         let is_sidechain = self.sidechain == Some(ti);
-        let bank = &self.bank;
+        let ctx = Ctx {
+            sr: self.sr,
+            bpm: self.bpm,
+            bank: &self.bank,
+        };
         let t = &mut self.tracks[ti];
-        if !t.active {
+        if !t.active || matches!(t.inst, Inst::None) {
             return;
         }
-        let mut chokes_open_hat = false;
-        match &mut t.inst {
-            Inst::None => return,
-            Inst::Drum(v) => {
-                v.trigger(vel, &t.params, sr, bpm);
-                chokes_open_hat = v.model == DrumModel::HatClosed;
-            }
-            Inst::Acid(a) => a.note_on(note, vel, slide, accent, sr),
-            Inst::Bass(b) => b.note_on(note, vel, slide, sr),
-            Inst::Poly(p) => {
-                if let Some((s, _)) = step {
-                    for n in s.notes.iter().filter(|n| **n >= 0) {
-                        p.note_on(*n as u8, vel);
-                    }
-                } else {
-                    p.note_on(note, vel);
+        let params = t.applied;
+        let poly = t.inst.is_poly();
+        match step {
+            Some((s, _)) if poly => {
+                for n in s.notes.iter().filter(|n| **n >= 0) {
+                    t.inst
+                        .start(*n as u8, vel, false, accent, &params, &ctx, &mut t.scratch);
                 }
             }
-            Inst::Sampler(s) => s.note_on(note, vel, bank, sr),
+            _ => t
+                .inst
+                .start(note, vel, slide, accent, &params, &ctx, &mut t.scratch),
         }
         // Note lengths from the pattern (live notes wait for the key release).
         if let Some((s, index)) = step {
             let gate = match t.kind {
                 kind::ACID => 0.55,
                 kind::BASS808 => 0.95,
-                kind::POLY => 0.9,
+                kind::POLY | kind::FM | kind::SUPER | kind::PLUCK => 0.9,
                 _ => 0.0,
             };
             if gate > 0.0 {
-                let next = t.steps[((index + s.len as u64) % t.length as u64) as usize];
-                let tie = next.on && next.slide && matches!(t.kind, kind::ACID | kind::BASS808);
-                if !tie {
-                    let samples = (s.len as f64 * base * gate) as i64;
-                    if t.kind == kind::POLY {
-                        for n in s.notes.iter().filter(|n| **n >= 0) {
+                if poly {
+                    for (k, n) in s.notes.iter().enumerate() {
+                        if *n >= 0 {
+                            let samples = (s.note_len(k) as f64 * base * gate) as i64;
                             t.schedule_off(*n as u8, samples);
                         }
-                    } else {
-                        t.schedule_off(note, samples);
+                    }
+                } else {
+                    let len = s.note_len(0);
+                    let next = t.steps[((index + len as u64) % t.length as u64) as usize];
+                    let tie = next.on && next.slide && matches!(t.kind, kind::ACID | kind::BASS808);
+                    if !tie {
+                        t.schedule_off(note, (len as f64 * base * gate) as i64);
                     }
                 }
             }
         }
-        if chokes_open_hat {
+        if t.inst.drum_model() == Some(DrumModel::HatClosed) {
+            let sr = self.sr;
             for other in self.tracks.iter_mut() {
                 if let Inst::Drum(v) = &mut other.inst {
                     if v.model == DrumModel::HatOpen {
@@ -869,6 +1062,7 @@ impl Engine {
             self.click.trigger(0.9, &p, self.sr, self.bpm);
         }
         self.last_step = index;
+        self.beat_clock = index as f64 / 4.0;
         self.cur_dur = self.step_duration(index);
         self.samples_to_next += self.cur_dur;
         self.global_step += 1;
@@ -880,11 +1074,79 @@ impl Engine {
         }
     }
 
+    /// Evaluates the automation lanes at the song position and brings every
+    /// track and the master to the values in use. Curves play in song mode.
+    fn automate(&mut self) {
+        for t in self.tracks.iter_mut() {
+            t.auto = TrackAuto::default();
+        }
+        let mut m = MasterAuto::default();
+        if self.mode == 1 && self.playing {
+            let pos = self.last_step as f32 + self.step_fraction() as f32;
+            for lane in self.lanes.iter() {
+                let Some(v) = lane.eval(pos) else {
+                    continue;
+                };
+                match lane.target {
+                    target::MASTER => match lane.param {
+                        master_param::FILTER => m.filter = Some(v),
+                        master_param::VOLUME => m.gain = volume_gain(v),
+                        master_param::REVERB => m.rev = v * 2.0,
+                        master_param::DELAY => m.del = v * 2.0,
+                        _ => {}
+                    },
+                    target::TRACK => {
+                        if let Some(t) = self.tracks.get_mut(lane.track as usize) {
+                            let a = &mut t.auto;
+                            match lane.param {
+                                track_param::VOLUME => a.gain = volume_gain(v),
+                                track_param::FILTER => a.filter = Some(v),
+                                track_param::PAN => a.pan = Some(v * 2.0 - 1.0),
+                                track_param::SEND_REVERB => a.rev = Some(v),
+                                track_param::SEND_DELAY => a.del = Some(v),
+                                p if (track_param::INST..track_param::INST + NUM_PARAMS as u8)
+                                    .contains(&p) =>
+                                {
+                                    a.params[(p - track_param::INST) as usize] = Some(v)
+                                }
+                                p if (track_param::FX
+                                    ..track_param::FX + (INSERT_SLOTS * INSERT_PARAMS) as u8)
+                                    .contains(&p) =>
+                                {
+                                    let k = (p - track_param::FX) as usize;
+                                    a.fx[k / INSERT_PARAMS][k % INSERT_PARAMS] = Some(v);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        let sr = self.sr;
+        for t in self.tracks.iter_mut() {
+            if t.active {
+                t.apply_values(sr);
+            }
+        }
+        self.master_auto = m;
+        let f = m.filter.unwrap_or(self.master_filter_knob);
+        if f != self.master_filter.value {
+            self.master_filter.set(f, sr);
+        }
+        self.auto_gain.set(m.gain);
+    }
+
     fn update_audibility(&mut self) {
         let any_solo = self.tracks.iter().any(|t| t.active && t.solo);
         for t in self.tracks.iter_mut() {
             t.audible = t.active && !t.mute && (!any_solo || t.solo);
-            let g = if t.audible { db_to_gain(t.vol_db) } else { 0.0 };
+            let g = if t.audible {
+                db_to_gain(t.vol_db) * t.auto.gain
+            } else {
+                0.0
+            };
             t.gain.set(g);
         }
     }
@@ -922,6 +1184,7 @@ impl Engine {
         ] {
             b[..frames].fill(0.0);
         }
+        self.automate();
         self.update_audibility();
         let mut offset = 0;
         while offset < frames {
@@ -958,138 +1221,98 @@ impl Engine {
             }
             self.duck_buf[i] = self.duck_env;
         }
+        let beat0 = self.beat_clock;
+        let beat_inc = self.bpm as f64 / 60.0 / sr as f64;
+        let ctx = Ctx {
+            sr,
+            bpm: self.bpm,
+            bank: &self.bank,
+        };
         for ti in 0..MAX_TRACKS {
-            if !self.tracks[ti].active {
+            let t = &mut self.tracks[ti];
+            if !t.active {
                 continue;
             }
-            // Note-offs due in this chunk.
-            {
-                let t = &mut self.tracks[ti];
-                for k in 0..t.offs.len() {
-                    if t.offs[k].note >= 0 {
-                        if t.offs[k].samples <= 0 {
-                            let note = t.offs[k].note as u8;
-                            t.offs[k] = NO_OFF;
-                            note_off(&mut t.inst, note);
-                        } else {
-                            t.offs[k].samples -= n as i64;
-                        }
-                    }
-                }
-            }
-            let bank = &self.bank;
-            let t = &mut self.tracks[ti];
+            t.run_offs(n);
             let buf = &mut self.buf[..n];
-            match &mut t.inst {
-                Inst::None => buf.fill(0.0),
-                Inst::Drum(v) => {
-                    for x in buf.iter_mut() {
-                        *x = v.next(sr);
-                    }
-                }
-                Inst::Acid(a) => {
-                    for x in buf.iter_mut() {
-                        *x = a.next(sr);
-                    }
-                }
-                Inst::Bass(b) => {
-                    for x in buf.iter_mut() {
-                        *x = b.next(sr);
-                    }
-                }
-                Inst::Poly(p) => {
-                    for x in buf.iter_mut() {
-                        *x = p.next(sr);
-                    }
-                }
-                Inst::Sampler(s) => {
-                    for x in buf.iter_mut() {
-                        *x = s.next(bank);
-                    }
-                }
-            }
+            t.inst.render(buf, &ctx, &mut t.scratch);
             if !t.fx.is_neutral() {
                 for x in buf.iter_mut() {
                     *x = t.fx.process(*x);
                 }
             }
+            let inserts = t.inserts.iter().any(|x| x.is_on());
+            let send_rev = t.auto.rev.unwrap_or(t.send_rev);
+            let send_del = t.auto.del.unwrap_or(t.send_del);
             let mut peak = 0.0f32;
             for i in 0..n {
+                let x = self.buf[i];
+                let (mut l, mut r) = (x, x);
+                if inserts {
+                    let fx = FxCtx {
+                        sr,
+                        bpm: ctx.bpm,
+                        beat: beat0 + i as f64 * beat_inc,
+                    };
+                    for ins in t.inserts.iter_mut() {
+                        if ins.is_on() {
+                            (l, r) = ins.process(l, r, &fx);
+                        }
+                    }
+                }
                 let g = t.gain.next();
                 let d = if t.duck > 0.0 {
                     1.0 - t.duck * self.duck_buf[i]
                 } else {
                     1.0
                 };
-                let x = self.buf[i] * g * d;
-                peak = peak.max(x.abs());
+                let gl = l * g * d;
+                let gr = r * g * d;
+                peak = peak.max(gl.abs().max(gr.abs()));
                 let j = offset + i;
-                self.mix_l[j] += x * t.pl;
-                self.mix_r[j] += x * t.pr;
-                self.rev_in[j] += x * t.send_rev;
-                self.del_in[j] += x * t.send_del;
+                self.mix_l[j] += gl * t.pl;
+                self.mix_r[j] += gr * t.pr;
+                let mono = (gl + gr) * 0.5;
+                self.rev_in[j] += mono * send_rev;
+                self.del_in[j] += mono * send_del;
             }
             let acc = &mut self.track_peak_acc[ti];
             *acc = acc.max(peak);
         }
         // Soundboard one-shots go to the master bus, with a touch of reverb.
-        {
-            let bank = &self.bank;
-            for s in self.shots.iter_mut() {
-                if !s.active {
-                    continue;
+        for (s, scratch) in self.shots.iter_mut().zip(self.shot_scratch.iter_mut()) {
+            if !s.active {
+                continue;
+            }
+            let buf = &mut self.buf[..n];
+            s.inst.render(buf, &ctx, scratch);
+            for i in 0..n {
+                let x = buf[i] * 0.8;
+                self.mix_l[offset + i] += x;
+                self.mix_r[offset + i] += x;
+                self.rev_in[offset + i] += x * 0.12;
+            }
+            if s.off > 0 {
+                s.off -= n as i64;
+                if s.off <= 0 {
+                    let note = s.note;
+                    s.inst.stop(note);
                 }
-                for i in 0..n {
-                    let x = match &mut s.inst {
-                        Inst::Drum(v) => v.next(sr),
-                        Inst::Acid(a) => a.next(sr),
-                        Inst::Bass(b) => b.next(sr),
-                        Inst::Poly(pl) => pl.next(sr),
-                        Inst::Sampler(sm) => sm.next(bank),
-                        Inst::None => 0.0,
-                    } * 0.8;
-                    self.mix_l[offset + i] += x;
-                    self.mix_r[offset + i] += x;
-                    self.rev_in[offset + i] += x * 0.12;
-                }
-                if s.off > 0 {
-                    s.off -= n as i64;
-                    if s.off <= 0 {
-                        let note = s.note;
-                        note_off(&mut s.inst, note);
-                    }
-                }
-                s.life -= n as i64;
-                if s.life <= 0 {
-                    *s = SHOT_IDLE;
-                }
+            }
+            s.life -= n as i64;
+            if s.life <= 0 {
+                *s = SHOT_IDLE;
             }
         }
         // Preview (sounds auditioned from the browser) and metronome go to the cue bus.
         {
-            let bank = &self.bank;
             let p = &mut self.preview;
             if p.active {
-                for k in 0..p.offs.len() {
-                    if p.offs[k].note >= 0 {
-                        if p.offs[k].samples <= 0 {
-                            let note = p.offs[k].note as u8;
-                            p.offs[k] = NO_OFF;
-                            note_off(&mut p.inst, note);
-                        } else {
-                            p.offs[k].samples -= n as i64;
-                        }
-                    }
-                }
+                p.run_offs(n);
+                let buf = &mut self.buf[..n];
+                p.inst.render(buf, &ctx, &mut p.scratch);
                 for i in 0..n {
-                    let x = match &mut p.inst {
-                        Inst::Drum(v) => v.next(sr),
-                        Inst::Acid(a) => a.next(sr),
-                        Inst::Bass(b) => b.next(sr),
-                        Inst::Poly(pl) => pl.next(sr),
-                        Inst::Sampler(s) => s.next(bank),
-                        Inst::None => 0.0,
-                    } * 0.8;
+                    let x = buf[i] * 0.8;
                     self.cue_l[offset + i] += x;
                     self.cue_r[offset + i] += x;
                 }
@@ -1100,26 +1323,30 @@ impl Engine {
             self.cue_l[offset + i] += c;
             self.cue_r[offset + i] += c;
         }
+        self.beat_clock += n as f64 * beat_inc;
     }
 
     fn master(&mut self, frames: usize) {
         let mut pk = [0.0f32; 2];
         let mut rms = 0.0f64;
+        let rev_mul = self.master_auto.rev;
+        let del_mul = self.master_auto.del;
         for i in 0..frames {
             let (rl, rr) = self.reverb.process(self.rev_in[i]);
             let (dl, dr) = self.delay.process(self.del_in[i]);
-            let mut l = self.mix_l[i] + rl + dl;
-            let mut r = self.mix_r[i] + rr + dr;
+            let mut l = self.mix_l[i] + rl * rev_mul + dl * del_mul;
+            let mut r = self.mix_r[i] + rr * rev_mul + dr * del_mul;
             if self.build_active {
                 l = self.build_hp[0].hp(l);
                 r = self.build_hp[1].hp(r);
             }
+            (l, r) = self.master_filter.process(l, r);
             if self.cue_to_master {
                 l += self.cue_l[i];
                 r += self.cue_r[i];
             }
             let (gl, gr) = self.glue.process(l, r);
-            let g = self.master_gain.next();
+            let g = self.master_gain.next() * self.auto_gain.next();
             let (ol, or) = self.limiter.process(gl * g, gr * g);
             self.analyzer.feed((ol + or) * 0.5);
             pk[0] = pk[0].max(ol.abs());
@@ -1146,19 +1373,16 @@ impl Engine {
         }
         let mut bands = [0.0f32; BANDS];
         self.analyzer.bands(&mut bands);
+        let frac = self.step_fraction() as f32;
         let s = &mut self.status;
         s[st::PLAYING] = if self.playing { 1.0 } else { 0.0 };
         s[st::STEP] = step as f32;
         s[st::BAR] = (step / 16) as f32;
         s[st::STEP_IN_BAR] = (step % 16) as f32;
-        let frac = if self.playing && self.cur_dur > 0.0 {
-            (1.0 - self.samples_to_next / self.cur_dur).clamp(0.0, 1.0) as f32
-        } else {
-            0.0
-        };
         s[st::STEP_FRACTION] = frac;
         s[st::BEAT_PHASE] = (((step % 4) as f32) + frac) / 4.0;
         s[st::TRIGGERS] = (self.trig_acc & 0xFFFF) as f32;
+        s[st::TRIGGERS_HI] = ((self.trig_acc >> 16) & 0xFFFF) as f32;
         s[st::PEAK_L] = self.peak_acc[0];
         s[st::PEAK_R] = self.peak_acc[1];
         s[st::RMS] = if self.rms_n > 0 {

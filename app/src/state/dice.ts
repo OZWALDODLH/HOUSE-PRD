@@ -1,6 +1,6 @@
 // "Dados": a new pattern for one track, inside the song's style and key.
 import { edit, mapTrack } from './store';
-import { SCALES, emptyStep, type GenreId, type Project, type Step, type Track } from './model';
+import { SCALES, emptyStep, isChordKind, type GenreId, type Project, type Step, type Track } from './model';
 
 type Rand = () => number;
 
@@ -159,7 +159,7 @@ export function rollDice(id: string, seed = Date.now()): void {
         const bar = drumSteps(t, p.genre, r);
         steps = Array.from({ length: 64 }, (_, i) => ({ ...bar[i % 16] }));
         if (t.kind === 'sampler') steps = steps.map((s) => (s.on ? { ...s, notes: [60] } : s));
-      } else if (t.kind === 'poly') steps = chordSteps(t, p, r);
+      } else if (isChordKind(t.kind)) steps = chordSteps(t, p, r);
       else steps = bassSteps(t, p, r);
       return { ...t, steps };
     }),
