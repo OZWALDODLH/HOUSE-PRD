@@ -5,6 +5,12 @@ dirección visual, por qué se eligió cada cosa y cómo se ve cada pantalla.
 Las reglas exactas (colores, tamaños, radios) están en
 [`DESIGN.md`](../DESIGN.md).
 
+> **La interfaz de hoy usa la segunda versión, "Estudio"** (sección 4.12):
+> un estudio de producción serio, con barra de menús, línea de tiempo,
+> arreglo, piano roll y mezcla, como FL Studio. Las secciones 4.2 a 4.9
+> describen la primera versión, "Sonidero", y se quedan como historia de las
+> decisiones: mucho de ella sigue vivo en "Estudio".
+
 Los bocetos de Inicio, Estudio, Cabina DJ, Voz y Visuales están en
 [`diseno/`](../diseno/README.md): capturas, HTML para abrir en el navegador y
 un [canvas en Claude](https://claude.ai/artifact/7toJbEqNAjbrJkWBkyS6FA)
@@ -263,3 +269,90 @@ Los Visuales tienen sus propias paletas por escena.
 6. **Pruebas con personas reales.** Cada fase termina probando con 5
    personas que nunca han hecho música (ver doc 6). Si no entienden algo, se
    cambia el diseño, no se agrega un tutorial.
+
+## 4.12 Segunda versión: "Estudio" (septiembre de 2026)
+
+### Por qué cambió
+
+Al probar la app, la persona dueña del proyecto pidió que la interfaz dejara
+de verse "de videojuego" y se pareciera más a un programa como FL Studio,
+sin perder lo que ya funcionaba. "Sonidero" era bonito como cartel, pero en
+el trabajo de todos los días pesaba: letras enormes, tintas en superficies
+grandes, una bocina que latía y una marquesina de papel. Para alguien que
+quiere hacer música en serio, eso se lee como juguete.
+
+### Lo que se queda
+
+- Las **tintas por familia** (naranja batería, amarillo bajo, azul sintes,
+  rosa voz, verde samples, turquesa efectos): ahora en objetos chicos (pasos,
+  notas, pictogramas, bordes) y mezcladas al 22–30 % en superficies grandes.
+- Los **pictogramas estilo Metro** y los íconos propios.
+- **Big Shoulders**, solo en la marca y en los dígitos de las pantallas
+  (posición y BPM), y **Atkinson Hyperlegible Next** para todo lo demás.
+- Las **palabras de principiante**, Fácil/Pro, los retos y los tips.
+- El chasis gris cálido, más oscuro (`#1F1C1A`), con paneles separados por
+  ranuras de 3 px como un rack.
+
+### Lo que cambió
+
+- **Barra de menús** de programa (Archivo, Editar, Agregar, Ver, Ayuda) con
+  atajos: proyecto en blanco, abrir, guardar como archivo, importar audio,
+  exportar, duplicar pista, vistas.
+- **Barra de herramientas** con transporte, pantallas de posición y tempo,
+  tonalidad, swing, Loop/Canción, metrónomo, teclado musical, deshacer,
+  Fácil/Pro y el medidor maestro (sustituye a la bocina).
+- **Navegador** a la izquierda: Sonidos (con búsqueda y familias), Mis
+  samples y Efectos. Todo se arrastra: sonidos a las pistas o a un pad,
+  efectos a una pista, tus samples a un pad o a una tecla del Soundboard.
+- **Cuatro vistas**: Patrón (el channel rack), Arreglo (la canción como
+  playlist, con curvas), Piano roll (notas y acordes) y Mezcla.
+- **La línea de tiempo** es el único protagonista: regla de compases,
+  secciones, curva de energía y un cabezal que se arrastra.
+- Tamaños de herramienta: botones de 26 px, perillas de 36 px (48 en Fácil),
+  el título más grande mide 24 px.
+
+### Pantallas
+
+**Inicio**
+
+```
+┌ HOUSE ───────────────────────────────────────── Salidas de audio  Atajos ┐
+├───────────────┬───────────────────────────────────────┬──────────────────┤
+│ Empezar       │ Plantillas  Todos|Electrónica|Urbano… │ Tus proyectos    │
+│ ▢ Proyecto en │ ▶ Tech house   126 BPM ▪▪▫▪▫  Crear   │ mini-secciones   │
+│   blanco      │ ▶ Trap         140 BPM ▪▫▫▪▫          │ nombre, estilo,  │
+│ ▢ Abrir .house│ ▶ Cumbia        98 BPM ▪▪▪▪▪          │ hace cuánto      │
+│ ▢ Grabar voz  │   … 21 estilos en 4 grupos            │                  │
+│ Aprender      │                                       │                  │
+│ ▢ Tutorial    │                                       │                  │
+│ ▢ Retos       │                                       │                  │
+└───────────────┴───────────────────────────────────────┴──────────────────┘
+```
+
+**Estudio**: la distribución está en `DESIGN.md`, sección 8.
+
+**Arreglo**: una fila por pista y un bloque por sección con el dibujo de su
+patrón; clic o arrastre para decidir qué suena en cada parte. Con una sección
+elegida aparece su barra (tipo, compases, mover, duplicar, borrar y
+**Transición**). Abajo, las **curvas**: puntos que se arrastran, un círculo en
+medio de cada tramo que dobla la curva (la misma forma que usa el motor) y
+curvas listas: filtro que se abre, barrido, silencio antes del drop, eco o
+espacio que crecen, entrada y salida suaves.
+
+**Piano roll**: teclado a la izquierda, notas en la tinta de la pista, carril
+de fuerza abajo y, para teclas y sintes, la **tira de acordes** arriba: cada
+bloque dice su nombre ("Lam", "Fa") y se mueve, se alarga, se cambia, se
+invierte o se borra. "+ Acorde" ofrece los 7 que combinan con la tonalidad, con
+su número romano y lo que se siente; "Progresiones" escribe cuatro acordes
+famosos; en los bajos, "Seguir acordes" escribe la nota principal de cada uno.
+
+**Editor de audio**: aparece al parar una grabación, al importar o soltar un
+archivo y con "Editar audio". Forma de onda grande con asas, mapa del audio
+completo, zoom con la rueda, escuchar la parte, suavizar orillas, al revés,
+cortar en pads (partes iguales o en cada golpe) y guardar en Mis samples. El
+audio de hasta un minuto se guarda completo, así que el corte se puede cambiar
+después.
+
+**Tutorial**: 11 lecciones con un proyecto de práctica cada una. Un foco
+amarillo señala el control, una burbuja lo explica y, cuando el paso pide
+hacer algo, espera a que lo hagas y sigue sola.

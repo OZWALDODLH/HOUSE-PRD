@@ -1,10 +1,10 @@
 # HOUSE
 
 **Haz el beat, mézclalo y míralo.** HOUSE (nombre clave) es una app de
-escritorio para crear música electrónica y urbana (tech house, techno,
-reggaetón y más), mezclar tus propios tracks como DJ con audífonos y bocina
-por separado, grabar tu voz y proyectar visuales psicodélicos o relajantes en
-un segundo monitor. Está pensada para que alguien que nunca ha hecho música
+escritorio para crear música electrónica, urbana y latina (tech house,
+techno, reggaetón, trap, cumbia, afrobeats y más), mezclar tus propios tracks
+como DJ con audífonos y bocina por separado, grabar tu voz y proyectar
+visuales psicodélicos o relajantes en un segundo monitor. Está pensada para que alguien que nunca ha hecho música
 tenga su primer beat sonando en cinco minutos, sin quedarse corta cuando ya
 sepa lo que hace.
 
@@ -20,7 +20,7 @@ Tauri. El estado exacto está en
 
 - **En el navegador** (Chrome o Edge recomendados): cada build de CI deja el
   archivo `house-demo-web` (un solo `index.html`) en los artefactos de GitHub
-  Actions. Ábrelo, elige un estilo y presiona Espacio. En el navegador suena
+  Actions. Ábrelo, crea un proyecto desde una plantilla y presiona Espacio. En el navegador suena
   por una sola salida; la bocina y los audífonos por separado necesitan la app
   de escritorio.
 - **App de escritorio**: los instaladores de Windows, macOS y Linux salen en
@@ -30,23 +30,29 @@ Tauri. El estado exacto está en
 
 ## Cómo se usa
 
-1. En **Inicio** elige un camino (hacer un beat, grabar tu voz, tocar pads o
-   aprender con retos) y un estilo. Con el botón redondo escuchas cada estilo.
+1. En **Inicio** empieza un **proyecto en blanco**, crea uno desde una de las
+   21 **plantillas** (escúchalas con el botón redondo) o abre el **Tutorial**:
+   11 lecciones que te señalan cada control y te enseñan a hacer música desde
+   cero.
 2. **Espacio** reproduce o para. Las teclas `1 2 3 4`, `Q W E R`, `A S D F`,
    `Z X C V` tocan tus pistas; `7` a `-` tocan notas del bajo o sinte elegido,
    siempre en la escala. **Tab** prende o apaga el teclado musical. En modo
    **Soundboard** cada tecla de letras y números dispara el sonido que le
    pongas, aunque la canción esté parada: clic en una tecla vacía para darle
    sonido, clic derecho para cambiarlo.
-3. Haz clic en los pasos para prender o apagar golpes (arrastra para pintar
-   varios). En el bajo y los acordes, arrastra una nota hacia arriba o abajo
-   para cambiarla: nunca se sale de la tonalidad.
-4. Cambia de **Loop** a **Canción** y haz clic en una sección de la
-   marquesina para ir directo ahí; la palomita de cada pista dice si suena en
-   esa sección.
-5. **Exportar** crea un WAV de la canción o de un loop. **Visuales** (F6) abre
-   la ventana para el segundo monitor.
-6. Todo se guarda solo. **Ctrl+Z** deshace.
+3. Arrastra sonidos del **navegador** a las pistas. En **Patrón** (F1) haz
+   clic en los pasos para prender golpes; en **Piano roll** (F4) dibuja notas
+   y pon **acordes** con la tira de arriba o con "Progresiones".
+4. En **Arreglo** (F2) decide qué suena en cada parte de la canción y ponle
+   **transiciones**: curvas que abren un filtro o hacen crecer el eco. Haz
+   clic o arrastra en la regla de la **línea de tiempo** para ir a cualquier
+   punto.
+5. **Graba tu voz** (Ctrl+R) o suelta un audio: el editor te deja elegir tu
+   parte favorita, cortarla en pads y guardarla en **Mis samples**.
+6. En **Mezcla** (F3) ajusta volúmenes y agrega **efectos** a cada pista.
+   **Exportar** crea un WAV; **Visuales** (F6) abre la ventana para el
+   segundo monitor.
+7. Todo se guarda solo. **Ctrl+Z** deshace.
 
 ## Cómo se compila
 
@@ -76,8 +82,8 @@ npm --prefix app run build:demo
 
 | Carpeta | Qué hay |
 |---|---|
-| `crates/house-engine` | Motor de audio en Rust: batería sintetizada, Ácido, 808, Analógico, Sampler, secuenciador, secciones, efectos y master. El mismo código corre como WebAssembly y nativo. |
-| `app/` | Interfaz en React 19 + TypeScript: Inicio, Estudio (Patrón y Mezcla), Visuales, diálogos, pruebas de punta a punta. |
+| `crates/house-engine` | Motor de audio en Rust: batería sintetizada, Ácido, 808, Analógico, Teclas FM, Supersaw, Cuerdas, Sampler con recorte, secuenciador, secciones, curvas de automatización, efectos por pista y master. El mismo código corre como WebAssembly y nativo. |
+| `app/` | Interfaz en React 19 + TypeScript: Inicio, Estudio (Patrón, Arreglo, Piano roll y Mezcla), editor de audio, tutorial, Visuales, diálogos, pruebas de punta a punta. |
 | `src-tauri/` | App de escritorio: ventanas, audio nativo con `cpal`, dos salidas con compensación de deriva, guardar archivos. |
 | `scripts/` | Compilar el motor a WebAssembly y revisar licencias de npm. |
 
@@ -88,7 +94,7 @@ npm --prefix app run build:demo
 | 1 | [Visión y producto](docs/01-vision.md) | Para quién es, principios, espacios de la app, recorridos clave, nombre. |
 | 2 | [Investigación](docs/02-investigacion.md) | Qué hacen las apps de música en 2026, hallazgos técnicos que cambian el plan, la receta de cada género (BPM, patrones, estructuras), fuentes. |
 | 3 | [Funciones](docs/03-funciones.md) | Especificación módulo por módulo: estudio, sintetizadores, teclado como pads, sampling, voz, efectos, mezcla, cabina DJ, salidas de audio, visuales, aprendizaje. |
-| 4 | [Diseño de interfaz](docs/04-diseno.md) | La dirección visual "Sonidero", por qué se ve así y cómo no caer en lo genérico. |
+| 4 | [Diseño de interfaz](docs/04-diseno.md) | La dirección visual ("Estudio", antes "Sonidero"), por qué se ve así y cómo no caer en lo genérico. |
 | 5 | [Arquitectura](docs/05-arquitectura.md) | Tecnología elegida, motor de audio, multi-salida, visuales, IA local, librerías y licencias. |
 | 6 | [Hoja de ruta](docs/06-hoja-de-ruta.md) | Fases con entregables y criterios de salida, riesgos, métricas y decisiones pendientes. |
 | 7 | [Ideas](docs/07-ideas.md) | Banco de ideas para que HOUSE tenga cosas que nadie más tiene. |
@@ -116,18 +122,27 @@ IA).
   varias salidas de audio a la vez y una segunda pantalla.
 - **Tauri 2 + motor de audio nativo en Rust + interfaz en React/TypeScript +
   visuales WebGL2/WebGPU** en una ventana aparte.
-- **Diseño "Sonidero"**: chasis de aparato, tintas de cartel sonidero con
-  texto negro, Big Shoulders + Atkinson Hyperlegible Next. Nada de
-  degradados morados ni tarjetas genéricas.
+- **Diseño "Estudio"**: un estudio de producción serio (menús, línea de
+  tiempo, arreglo, piano roll, mezcla) con la identidad de HOUSE en los
+  detalles: tintas por familia de sonido, pictogramas estilo Metro, Big
+  Shoulders + Atkinson Hyperlegible Next. Nada de degradados morados ni
+  tarjetas genéricas.
 - **La IA ayuda, no compone por ti**: stems, limpieza de voz, análisis y un
   copiloto opcional.
 
-## Bocetos
+## Capturas y bocetos
 
 | | |
 |---|---|
-| ![Inicio](diseno/capturas/inicio.png) | ![Cabina DJ](diseno/capturas/dj.png) |
-| ![Voz](diseno/capturas/voz.png) | ![Visuales](diseno/capturas/visuales.png) |
+| ![Inicio](diseno/capturas/app-inicio.png) | ![Arreglo con una curva de transición](diseno/capturas/app-arreglo.png) |
+| ![Piano roll con acordes](diseno/capturas/app-piano-roll.png) | ![Editor de audio](diseno/capturas/app-editor-audio.png) |
+| ![Mezcla con efectos](diseno/capturas/app-mezcla.png) | ![Tutorial](diseno/capturas/app-tutorial.png) |
+
+Bocetos de lo que viene (Cabina DJ, Voz):
+
+| | |
+|---|---|
+| ![Cabina DJ](diseno/capturas/dj.png) | ![Voz](diseno/capturas/voz.png) |
 
 Detalle de cada pantalla en [`diseno/README.md`](diseno/README.md).
 

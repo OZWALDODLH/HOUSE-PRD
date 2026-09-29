@@ -115,3 +115,17 @@ candidatas.
   permisos de medios).
 - **Mover el documento a Rust** cuando llegue la Cabina DJ (ver 5.14).
 
+
+## Pendientes que salieron en la segunda ronda
+
+- **Clips de audio en el arreglo**: soltar una grabación larga (una voz
+  completa) directo en la línea de tiempo, sin pasar por un pad.
+- **Variaciones de patrón por sección** (patrón A para el verso, B para el
+  coro) en la misma pista.
+- **Ajustar un audio al tempo** (time-stretch) al importarlo.
+- **Importar y exportar MIDI** para llevar las notas a otros programas.
+- **Más de dos efectos por pista** y efectos en el master.
+- **Lecciones por género** en el tutorial (tu primer reggaetón, tu primer
+  techno) y lecciones de teoría ligera (qué es una escala, por qué suenan
+  bien los acordes).
+- **Tema Día** y **Alto contraste** en la app (están en `DESIGN.md`).

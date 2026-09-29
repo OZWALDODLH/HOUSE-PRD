@@ -31,9 +31,13 @@ cada fase está en `docs/06-hoja-de-ruta.md`, sección 6.9.
   WebAssembly en un AudioWorklet y nativo en la app de escritorio. Protocolo de
   comandos en `command.rs`; el espejo en TypeScript es `app/src/engine/protocol.ts`.
 - `app/`: interfaz (React 19 + TypeScript + Vite). `src/state` (documento,
-  plantillas, guardado), `src/engine` (puentes al motor, sincronización,
-  exportar), `src/ui` (componentes del sistema de diseño), `src/screens`,
-  `src/visuals` (escenas y modo seguro), `tests/e2e.mjs` (pruebas en navegador).
+  plantillas, acciones de los menús, acordes, notas, curvas, efectos, editor
+  de audio, Mis samples, guardado), `src/engine` (puentes al motor,
+  sincronización, exportar), `src/ui` (componentes: barra de menús, línea de
+  tiempo, navegador, Patrón, Arreglo, Piano roll, Mezcla, editor de audio),
+  `src/screens` (Inicio y Estudio), `src/tutorial` (motor de lecciones y las
+  11 lecciones), `src/visuals` (escenas y modo seguro), `tests/e2e.mjs`
+  (pruebas en navegador).
 - `src-tauri/`: app de escritorio (audio nativo con `cpal`, dos salidas).
 - `scripts/`, `deny.toml`, `.github/workflows/ci.yml`: build del motor,
   licencias y CI.

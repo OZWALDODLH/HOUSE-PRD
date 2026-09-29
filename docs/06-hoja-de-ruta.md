@@ -237,3 +237,25 @@ compensación de deriva (F4) y grabar voz a un pad (F2).
 en menos de 10 minutos) y una hora sin cortes con 12 pistas en una laptop de
 gama media.
 
+
+### Segunda ronda: lo que se pidió después de probar la app
+
+Después de probar la Fase 1 se pidieron estos cambios. Varios son de la Fase 2
+(arreglo, piano roll, automatización, editor de audio) y se adelantaron por
+ese pedido explícito.
+
+| Pedido | Estado |
+|---|---|
+| Recortar el audio al grabar para elegir la parte favorita | Hecho: al parar la toma se abre el editor de audio (asas, zoom, escuchar la parte, suavizar, al revés). El mismo editor abre archivos importados o soltados y el audio de cualquier pista ("Editar audio"). |
+| Mover la línea de tiempo que avanza al reproducir | Hecho: clic o arrastre en la regla (se pega al tiempo; con Shift, al paso), flechas para mover un tiempo o un compás, y la pantalla de posición muestra compás, tiempo y paso aunque esté parado. |
+| Más sonidos y una interfaz que no parezca videojuego | Hecho: 72 sonidos (toms, bongos, clave, pandero, ride, 808, láser, corneta, caída de sub, teclas FM, supersaw, guitarras, arpa, koto…) y el diseño "Estudio" (ver 4.12). |
+| Proyectos nuevos en blanco | Hecho: en Inicio, en Archivo y con Ctrl+N. |
+| Agregar, mover y borrar acordes | Hecho: tira de acordes en el piano roll, los 7 acordes de la tonalidad con lo que se siente, progresiones, inversiones, octavas, copiar y un bajo que sigue los acordes. |
+| Curvas de transición entre partes | Hecho: vista Arreglo con curvas editables (puntos y tensión) y ocho transiciones listas para cualquier sección. |
+| Más audios, efectos y géneros | Hecho: 12 efectos por pista (dos espacios en cada una) y 21 plantillas en cuatro grupos: tech house, techno, house, EDM, trance, dubstep, drum & bass, UK garage, reggaetón, trap, drill, hip hop, phonk, dembow, cumbia, moombahton, afrobeats, amapiano, lo-fi, pop y synthwave. |
+| Un tutorial que enseñe todo y señale dónde está cada cosa | Hecho: 11 lecciones (estudio, ritmo, pads, bajo y escala, melodía, acordes, estructura, transiciones, voz y samples, mezcla y efectos, exportar), cada una con su proyecto de práctica. |
+| Hacer samples arrastrando o metiendo audios | Hecho: soltar archivos en el estudio, en una pista, en un pad o en una tecla del Soundboard; cortar en pads (partes iguales o por golpes) y Mis samples para usarlos en cualquier proyecto. |
+| Extender el programa como FL Studio, sin perder lo que había | Hecho: barra de menús, navegador, cuatro vistas (Patrón, Arreglo, Piano roll, Mezcla) y efectos en la mezcla; Fácil/Pro, pads, Soundboard, retos, visuales y exportar siguen igual. |
+
+**Pendiente de esta ronda**: probar el tutorial con personas que nunca han
+hecho música y medir cuánto tardan en terminar las lecciones 1 a 6.

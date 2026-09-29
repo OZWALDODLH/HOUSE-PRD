@@ -374,7 +374,28 @@ diferencias con el plan de arriba y por qué:
   corren en CI. Se aceptó **Unicode-3.0** (tablas de Unicode en crates básicos
   de Rust y de Tauri): es permisiva y no se puede evitar. La licencia del
   código de HOUSE queda sin elegir (decisión 6.7.3).
-- **Pruebas**: 14 del motor (incluye renders completos), 3 de la app de
-  escritorio (incluye 30 minutos de deriva) y 8 de punta a punta en Chromium
-  (audio, modo Canción, deshacer, exportar, ventana de visuales, modo seguro).
+- **Segunda ronda (interfaz "Estudio")**: el motor creció a 32 pistas, 64
+  espacios de audio, 26 modelos de batería y efectos de transición, tres
+  instrumentos nuevos (Teclas FM, Supersaw y Cuerdas con Karplus-Strong), dos
+  efectos por pista (12 tipos, líneas de retardo reservadas al crear el
+  motor), 16 curvas de automatización de 64 puntos que se evalúan una vez por
+  bloque en modo Canción, largo por nota para el piano roll, "ir a" un compás
+  y paso, y recorte no destructivo del sampler (inicio, fin, suavizado y al
+  revés). Nada de eso pide memoria en el hilo de audio.
+- **Interfaz por módulos**: `state/` guarda el documento (`store`), las
+  acciones de los menús (`actions`), acordes (`chords`), notas del piano roll
+  (`notes`), curvas (`automation`), efectos (`effects`), el editor de audio
+  (`audioEdit`) y Mis samples (`library`, en IndexedDB); `ui/` tiene un
+  componente por vista (`Timeline`, `Arreglo`, `PianoRoll`, `Navegador`,
+  `EditorAudio`, `Efectos`, `MenuBar`) y `tutorial/` el motor de lecciones.
+- **Lo que se mueve con la música vive en su propia capa**: cabezales y la
+  marca del paso que suena se mueven con `transform`, y pads, medidores y
+  pantallas tienen `will-change`, así que la interfaz no repinta paneles
+  mientras suena (60 cuadros por segundo incluso sin GPU, medido en CI).
+- **Pruebas**: 33 del motor (incluye renders completos, efectos, curvas y
+  recorte), 3 de la app de escritorio (incluye 30 minutos de deriva) y 20 de
+  punta a punta en Chromium: las 21 plantillas suenan, modo Canción, la regla
+  mueve el cabezal, deshacer, Soundboard, exportar, efectos, curvas, proyecto
+  en blanco, editor de audio (recortar, usar, reabrir, cortar en pads),
+  grabar, acordes, tutorial, ventana de visuales y modo seguro.
 
